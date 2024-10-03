@@ -164,7 +164,7 @@ impl FeatureGenerator for BigTreeGenerator {
                 for _ in 0..nodes_per_height {
 
                     let length = self.branch_scale * size as f32 * (rand.next_float() + 0.328);
-                    let angle = rand.next_float() * 2.0 * 3.14159;
+                    let angle = rand.next_float() * 2.0 * core::f32::consts::PI;
 
                     let leaf_x = (length * angle.sin() + pos.x as f32 + 0.5).floor() as i32;
                     let leaf_z = (length * angle.cos() + pos.z as f32 + 0.5).floor() as i32;

@@ -515,7 +515,7 @@ impl World {
                 if sticky {
 
                     let sticky_pos = head_pos + delta;
-                    let Some((mut sticky_id, mut sticky_metadata)) = self.get_block(sticky_pos) else {
+                    let Some((mut sticky_id, sticky_metadata)) = self.get_block(sticky_pos) else {
                         // We abort if the sticky block is in unloaded chunk.
                         return;
                     };
@@ -527,7 +527,6 @@ impl World {
                         if let Some(BlockEntity::Piston(piston)) = self.get_block_entity_mut(sticky_pos) {
                             if piston.extending && piston.face == face {
                                 sticky_id = piston.block;
-                                sticky_metadata = sticky_metadata;
                                 sticky_drop = true;
                                 self.remove_block_entity(head_pos);
                                 if self.is_block(pos, block::PISTON_MOVING) {
