@@ -105,10 +105,8 @@ impl World {
             if powered {
                 self.set_block_notify(pos, block::REDSTONE_TORCH, metadata);
             }
-        } else {
-            if !powered {
-                self.set_block_notify(pos, block::REDSTONE_TORCH_LIT, metadata);
-            }
+        } else if !powered {
+            self.set_block_notify(pos, block::REDSTONE_TORCH_LIT, metadata);
         }
 
     }
@@ -394,12 +392,8 @@ impl World {
                 z: self.rand.next_int_bounded(3) - 1,
             };
 
-            if self.get_light(spread_pos).max() < 13 {
-                if self.is_block_air(spread_pos) {
-                    if self.is_block_opaque_cube(spread_pos - IVec3::Y) {
-                        self.set_block_notify(spread_pos, id, 0);
-                    }
-                }
+            if self.get_light(spread_pos).max() < 13 && self.is_block_air(spread_pos) && self.is_block_opaque_cube(spread_pos - IVec3::Y) {
+                self.set_block_notify(spread_pos, id, 0);
             }
 
         }
@@ -499,14 +493,8 @@ impl World {
             }
 
             // Infinite water sources!
-            if sources_around >= 2 && flowing_id == block::WATER_MOVING {
-                if block::material::get_material(below_id).is_solid() {
-                    block::fluid::set_source(&mut new_metadata);
-                } else if below_id == flowing_id || below_id == still_id {
-                    if block::fluid::is_source(below_metadata) {
-                        block::fluid::set_source(&mut new_metadata);
-                    }
-                }
+            if sources_around >= 2 && flowing_id == block::WATER_MOVING && ((block::material::get_material(below_id).is_solid()) || ((below_id == flowing_id || below_id == still_id) && block::fluid::is_source(below_metadata))) {
+                block::fluid::set_source(&mut new_metadata);
             }
 
             // TODO: Weird lava stuff.
@@ -579,32 +567,29 @@ impl World {
             let face_pos = pos + face.delta();
             let (face_block, face_metadata) = self.get_block(face_pos).unwrap_or_default();
 
-            if !block::material::is_fluid_proof(face_block) {
-                if block::material::get_material(face_block) != material || !block::fluid::is_source(face_metadata) {
+            if !block::material::is_fluid_proof(face_block) && (block::material::get_material(face_block) != material || !block::fluid::is_source(face_metadata)) {
 
-                    let face_below_pos = face_pos - IVec3::Y;
-                    let (face_below_block, _) = self.get_block(face_below_pos).unwrap_or_default();
-                    
-                    let face_cost;
-                    if !block::material::is_fluid_proof(face_below_block) {
-                        face_cost = 0;
-                    } else {
-                        face_cost = self.calc_fluid_flow_cost(face_pos, material, face, 1);
-                    }
+                let face_below_pos = face_pos - IVec3::Y;
+                let (face_below_block, _) = self.get_block(face_below_pos).unwrap_or_default();
+                
+                let face_cost = if !block::material::is_fluid_proof(face_below_block) {
+                    0
+                } else {
+                    self.calc_fluid_flow_cost(face_pos, material, face, 1)
+                };
 
-                    // If this face has the lowest cost, that means that all previous face
-                    // are no longer of the lowest cost so we clear.
-                    if face_cost < lowest_cost {
-                        set.clear();
-                        lowest_cost = face_cost;
-                    }
-
-                    // If our face has the lowest cost, we insert it. 
-                    if face_cost == lowest_cost {
-                        set.insert(face);
-                    }
-
+                // If this face has the lowest cost, that means that all previous face
+                // are no longer of the lowest cost so we clear.
+                if face_cost < lowest_cost {
+                    set.clear();
+                    lowest_cost = face_cost;
                 }
+
+                // If our face has the lowest cost, we insert it. 
+                if face_cost == lowest_cost {
+                    set.insert(face);
+                }
+
             }
 
         }
@@ -627,20 +612,18 @@ impl World {
                 let face_pos = pos + face.delta();
                 let (face_block, face_metadata) = self.get_block(face_pos).unwrap_or_default();
 
-                if !block::material::is_fluid_proof(face_block) {
-                    if block::material::get_material(face_block) != material || !block::fluid::is_source(face_metadata) {
+                if !block::material::is_fluid_proof(face_block) && (block::material::get_material(face_block) != material || !block::fluid::is_source(face_metadata)) {
 
-                        let face_below_pos = face_pos - IVec3::Y;
-                        let (face_below_block, _) = self.get_block(face_below_pos).unwrap_or_default();
-                        if !block::material::is_fluid_proof(face_below_block) {
-                            return cost;
-                        }
-
-                        if cost < 4 {
-                            lowest_cost = lowest_cost.min(self.calc_fluid_flow_cost(face_pos, material, origin_face, cost + 1));
-                        }
-
+                    let face_below_pos = face_pos - IVec3::Y;
+                    let (face_below_block, _) = self.get_block(face_below_pos).unwrap_or_default();
+                    if !block::material::is_fluid_proof(face_below_block) {
+                        return cost;
                     }
+
+                    if cost < 4 {
+                        lowest_cost = lowest_cost.min(self.calc_fluid_flow_cost(face_pos, material, origin_face, cost + 1));
+                    }
+
                 }
 
             }

@@ -55,7 +55,7 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, snapshot: &ChunkSnapshot) -> &'a mu
     level.insert("Entities", snapshot.entities.iter()
         .filter_map(|entity| {
             let mut comp = NbtCompound::new();
-            if entity_nbt::to_nbt(&mut comp, &entity).is_some() {
+            if entity_nbt::to_nbt(&mut comp, entity).is_some() {
                 Some(Nbt::Compound(comp))
             } else {
                 None
@@ -66,7 +66,7 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, snapshot: &ChunkSnapshot) -> &'a mu
     level.insert("TileEntities", snapshot.block_entities.iter()
         .map(|(&pos, block_entity)| {
             let mut comp = NbtCompound::new();
-            block_entity_nbt::to_nbt(&mut comp, pos, &block_entity);
+            block_entity_nbt::to_nbt(&mut comp, pos, block_entity);
             Nbt::Compound(comp)
         })
         .collect::<Vec<_>>());

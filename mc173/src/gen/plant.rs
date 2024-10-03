@@ -93,6 +93,12 @@ impl SugarCanesGenerator {
     }
 }
 
+impl Default for SugarCanesGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FeatureGenerator for SugarCanesGenerator {
 
     fn generate(&mut self, world: &mut World, pos: IVec3, rand: &mut JavaRandom) -> bool {
@@ -144,6 +150,12 @@ impl PumpkinGenerator {
     }
 }
 
+impl Default for PumpkinGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FeatureGenerator for PumpkinGenerator {
 
     fn generate(&mut self, world: &mut World, pos: IVec3, rand: &mut JavaRandom) -> bool {
@@ -177,6 +189,12 @@ impl CactusGenerator {
     #[inline]
     pub fn new() -> Self {
         Self(())
+    }
+}
+
+impl Default for CactusGenerator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

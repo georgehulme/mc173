@@ -550,7 +550,7 @@ fn tick_projectile(world: &mut World, id: u32, entity: &mut Entity) {
         let mut fluid_boost = 0.0;
         for delta in 0u8..5 {
 
-            let min_y = base.bb.min.y + base.bb.size_y() * (delta + 0) as f64 / 5.0;
+            let min_y = base.bb.min.y + base.bb.size_y() * delta as f64 / 5.0;
             let max_y = base.bb.min.y + base.bb.size_y() * (delta + 1) as f64 / 5.0;
 
             let check_bb = BoundingBox {

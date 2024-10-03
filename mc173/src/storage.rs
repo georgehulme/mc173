@@ -159,7 +159,7 @@ impl ChunkStorage {
         }
 
         thread::Builder::new()
-            .name(format!("Chunk Storage Worker"))
+            .name("Chunk Storage Worker".to_string())
             .spawn(move || StorageWorker {
                 generator,
                 state: G::State::default(),
@@ -382,16 +382,14 @@ impl<G: ChunkGenerator> StorageWorker<G> {
         contains[1][1] = true;  // We know that our center chunk exists.
         
         // Check all chunks around in order to populate them if needed.
-        for dcx in 0..3 {
-            for dcz in 0..3 {
+        for (dcx, contain_chunks_x) in contains.iter_mut().enumerate() {
+            for (dcz, contain_chunk) in contain_chunks_x.iter_mut().enumerate().take(3) {
                 // If the chunk is not the current one (that we know existing). If the 
                 // chunk is contained in the world, it also implies that it has a state
                 // in the local "chunks_state" map.
-                if (dcx, dcz) != (1, 1) {
-                    if self.world.contains_chunk(cx + dcx as i32 - 1, cz + dcz as i32 - 1) {
-                        // NOTE: Array access should be heavily optimized by compiler.
-                        contains[dcx][dcz] = true;
-                    }
+                if (dcx, dcz) != (1, 1) && self.world.contains_chunk(cx + dcx as i32 - 1, cz + dcz as i32 - 1) {
+                    // NOTE: Array access should be heavily optimized by compiler.
+                    *contain_chunk = true;
                 }
             }
         }
@@ -450,9 +448,8 @@ impl<G: ChunkGenerator> StorageWorker<G> {
         }
 
         // Finally update all populated state for each chunk.
-        for dcx in 0..3 {
-            for dcz in 0..3 {
-                let populated_mask = new_populated[dcx][dcz];
+        for (dcx, &mask_x) in new_populated.iter().enumerate() {
+            for (dcz, &populated_mask) in mask_x.iter().enumerate() {
                 if populated_mask != 0 {
                     
                     let current_cx = cx + dcx as i32 - 1;

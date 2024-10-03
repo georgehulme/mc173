@@ -109,10 +109,8 @@ impl World {
                 // Check if the chest we found isn't a double chest.
                 for neighbor_face in Face::HORIZONTAL {
                     // Do not check our potential position.
-                    if face != neighbor_face.opposite() {
-                        if matches!(self.get_block(neighbor_pos + neighbor_face.delta()), Some((block::CHEST, _))) {
-                            return false; // The chest found already is double.
-                        }
+                    if face != neighbor_face.opposite() && matches!(self.get_block(neighbor_pos + neighbor_face.delta()), Some((block::CHEST, _))) {
+                        return false; // The chest found already is double.
                     }
                 }
                 // No other chest found, it's a single chest.

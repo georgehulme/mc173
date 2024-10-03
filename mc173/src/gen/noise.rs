@@ -247,9 +247,9 @@ impl PerlinNoise {
             for z_cube in 0..Z {
                 let (z, z_factor, z_index) = calc_pos((offset.y + z_cube as f64) * scale.y + self.offset.z);
                 
-                let a = self.permutations[x_index] as usize + 0;
+                let a = self.permutations[x_index] as usize;
                 let a0 = self.permutations[a] as usize + z_index;
-                let b = self.permutations[x_index + 1] as usize + 0;
+                let b = self.permutations[x_index + 1] as usize;
                 let b0 = self.permutations[b] as usize + z_index;
 
                 let noise = lerp(z_factor,

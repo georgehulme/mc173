@@ -155,13 +155,11 @@ impl BoundingBox {
     /// bounding box potentially colliding with it in the way, this function will return 
     /// the new delta that avoid this collision.
     pub fn calc_x_delta(self, other: Self, mut dx: f64) -> f64 {
-        if other.max.y > self.min.y && other.min.y < self.max.y {
-            if other.max.z > self.min.z && other.min.z < self.max.z {
-                if dx > 0.0 && other.max.x <= self.min.x {
-                    dx = dx.min(self.min.x - other.max.x);
-                } else if dx < 0.0 && other.min.x >= self.max.x {
-                    dx = dx.max(self.max.x - other.min.x);
-                }
+        if other.max.y > self.min.y && other.min.y < self.max.y && other.max.z > self.min.z && other.min.z < self.max.z {
+            if dx > 0.0 && other.max.x <= self.min.x {
+                dx = dx.min(self.min.x - other.max.x);
+            } else if dx < 0.0 && other.min.x >= self.max.x {
+                dx = dx.max(self.max.x - other.min.x);
             }
         }
         dx
@@ -171,13 +169,11 @@ impl BoundingBox {
     /// bounding box potentially colliding with it in the way, this function will return 
     /// the new delta that avoid this collision.
     pub fn calc_y_delta(self, other: Self, mut dy: f64) -> f64 {
-        if other.max.x > self.min.x && other.min.x < self.max.x {
-            if other.max.z > self.min.z && other.min.z < self.max.z {
-                if dy > 0.0 && other.max.y <= self.min.y {
-                    dy = dy.min(self.min.y - other.max.y);
-                } else if dy < 0.0 && other.min.y >= self.max.y {
-                    dy = dy.max(self.max.y - other.min.y);
-                }
+        if other.max.x > self.min.x && other.min.x < self.max.x && other.max.z > self.min.z && other.min.z < self.max.z {
+            if dy > 0.0 && other.max.y <= self.min.y {
+                dy = dy.min(self.min.y - other.max.y);
+            } else if dy < 0.0 && other.min.y >= self.max.y {
+                dy = dy.max(self.max.y - other.min.y);
             }
         }
         dy
@@ -187,13 +183,11 @@ impl BoundingBox {
     /// bounding box potentially colliding with it in the way, this function will return 
     /// the new delta that avoid this collision.
     pub fn calc_z_delta(self, other: Self, mut dz: f64) -> f64 {
-        if other.max.x > self.min.x && other.min.x < self.max.x {
-            if other.max.y > self.min.y && other.min.y < self.max.y {
-                if dz > 0.0 && other.max.z <= self.min.z {
-                    dz = dz.min(self.min.z - other.max.z);
-                } else if dz < 0.0 && other.min.z >= self.max.z {
-                    dz = dz.max(self.max.z - other.min.z);
-                }
+        if other.max.x > self.min.x && other.min.x < self.max.x && other.max.y > self.min.y && other.min.y < self.max.y {
+            if dz > 0.0 && other.max.z <= self.min.z {
+                dz = dz.min(self.min.z - other.max.z);
+            } else if dz < 0.0 && other.min.z >= self.max.z {
+                dz = dz.max(self.max.z - other.min.z);
             }
         }
         dz
@@ -672,6 +666,12 @@ impl<V> FaceMap<V> {
         self.set.contains_z()
     }
 
+}
+
+impl<V> Default for FaceMap<V> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<V> Drop for FaceMap<V> {

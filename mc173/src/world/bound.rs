@@ -62,7 +62,7 @@ impl World {
     pub fn get_block_colliding_box(&self, pos: IVec3, id: u8, metadata: u8) -> Option<BoundingBox> {
         let mut iter = self.iter_block_colliding_boxes(pos, id, metadata);
         let mut bb = iter.next()?;
-        while let Some(other) = iter.next() {
+        for other in iter {
             bb |= other;
         }
         Some(bb)
@@ -164,7 +164,7 @@ impl World {
             block::POWERED_RAIL |
             block::DETECTOR_RAIL => {
                 // TODO: Use proper metadata functions when implementing rails.
-                Face::NegY.extrude(0.0, if metadata >= 2 && metadata <= 5 { 10.0 / 16.0 } else { PIXEL_2 })
+                Face::NegY.extrude(0.0, if (2..=5).contains(&metadata) { 10.0 / 16.0 } else { PIXEL_2 })
             }
             block::SIGN |
             block::WALL_SIGN => return None,  // TODO:

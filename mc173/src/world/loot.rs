@@ -105,7 +105,7 @@ impl World {
             // Clay.
             block::CLAY => ItemStack::new_single(item::CLAY, 0),
             // Wheat, only drop if reached max stage.
-            block::WHEAT if try_num == 0 && metadata != 7 => return ItemStack::EMPTY,
+            block::WHEAT if try_num == 0 && metadata != 7 => ItemStack::EMPTY,
             block::WHEAT if try_num == 0 => ItemStack::new_single(item::WHEAT, 0),
             block::WHEAT => ItemStack::new_single(item::WHEAT_SEEDS, 0),
             // Dead bush.

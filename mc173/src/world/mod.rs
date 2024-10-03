@@ -279,7 +279,7 @@ impl World {
         Some(ChunkSnapshot {
             cx, 
             cz,
-            chunk: Arc::clone(&chunk),
+            chunk: Arc::clone(chunk),
             entities: chunk_comp.entities.values()
                 // Ignoring entities being updated, silently for now.
                 .filter_map(|&index| self.entities.get(index).unwrap().inner.clone())
@@ -1382,7 +1382,7 @@ impl World {
                         .wrapping_add(1013904223);
 
                     let rand = self.random_ticks_seed >> 2;
-                    let mut pos = IVec3::new((rand >> 0) & 15, 0, (rand >> 8) & 15);
+                    let mut pos = IVec3::new(rand & 15, 0, (rand >> 8) & 15);
                     pos.y = chunk_data.get_height(pos) as i32;
 
                     lightning_bolt.push(chunk_pos + pos);
@@ -1400,7 +1400,7 @@ impl World {
                         .wrapping_add(1013904223);
 
                     let rand = self.random_ticks_seed >> 2;
-                    let pos = IVec3::new((rand >> 0) & 15, (rand >> 16) & 127, (rand >> 8) & 15);
+                    let pos = IVec3::new(rand & 15, (rand >> 16) & 127, (rand >> 8) & 15);
 
                     let (id, metadata) = chunk_data.get_block(pos);
                     pending_random_ticks.push((chunk_pos + pos, id, metadata));
@@ -2201,13 +2201,11 @@ impl<T> TickVec<T> {
         // index before removing it.
         if self.invalidated {
             self.invalidated = false;
+        } else if let Some(cell) = self.inner.get(self.index) {
+            self.index = cell.next;
         } else {
-            if let Some(cell) = self.inner.get(self.index) {
-                self.index = cell.next;
-            } else {
-                // If the index is invalid, it should be the end sentinel.
-                debug_assert_eq!(self.index, Self::END);
-            }
+            // If the index is invalid, it should be the end sentinel.
+            debug_assert_eq!(self.index, Self::END);
         }
     }
 
@@ -2504,7 +2502,7 @@ impl<'a> Iterator for EntitiesIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(comp) = self.0.next() {
+        for comp in self.0.by_ref() {
             if let Some(ret) = comp.inner.as_deref() {
                 return Some((comp.id, ret));
             }
@@ -2530,7 +2528,7 @@ impl<'a> Iterator for EntitiesIterMut<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(comp) = self.0.next() {
+        for comp in self.0.by_ref() {
             if let Some(ret) = comp.inner.as_deref_mut() {
                 return Some((comp.id, ret));
             }
@@ -2764,7 +2762,7 @@ impl<'a> Iterator for ChunkComponentsIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((cx, cz)) = self.range.next() {
+        for (cx, cz) in self.range.by_ref() {
             if let Some(comp) = self.chunks.get(&(cx, cz)) {
                 return Some(comp);
             }

@@ -24,6 +24,12 @@ impl DungeonGenerator {
     }
 }
 
+impl Default for DungeonGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DungeonGenerator {
 
     fn gen_chest_stack(&self, rand: &mut JavaRandom) -> ItemStack {
@@ -79,21 +85,17 @@ impl FeatureGenerator for DungeonGenerator {
                     let check_pos = IVec3::new(x, y, z);
                     let check_material = world.get_block_material(check_pos);
 
-                    if y == start.y && !check_material.is_solid() {
+                    if (y == start.y && !check_material.is_solid()) || (y == end.y && !check_material.is_solid()) {
                         return false;
-                    } else if y == end.y && !check_material.is_solid() {
-                        return false;
-                    } else if y == pos.y && (x == start.x || x == end.x || z == start.z || z == end.z) {
-                        if world.is_block_air(check_pos) && world.is_block_air(check_pos + IVec3::Y) {
-                            air_count += 1;
-                        }
+                    } else if y == pos.y && (x == start.x || x == end.x || z == start.z || z == end.z) && world.is_block_air(check_pos) && world.is_block_air(check_pos + IVec3::Y) {
+                        air_count += 1;
                     }
 
                 }
             }
         }
 
-        if air_count < 1 || air_count > 5 {
+        if !(1..=5).contains(&air_count) {
             return false;
         }
 
@@ -105,9 +107,7 @@ impl FeatureGenerator for DungeonGenerator {
                     // PARITY: Notchian impl actually use set_block_notify.
 
                     let carve_pos = IVec3::new(x, y, z);
-                    if x != start.x && y != start.y && z != start.z && x != end.x && z != end.z {
-                        world.set_block(carve_pos, block::AIR, 0);
-                    } else if y >= 0 && !world.get_block_material(carve_pos - IVec3::Y).is_solid() {
+                    if (x != start.x && y != start.y && z != start.z && x != end.x && z != end.z) || (y >= 0 && !world.get_block_material(carve_pos - IVec3::Y).is_solid()) {
                         world.set_block(carve_pos, block::AIR, 0);
                     } else if world.get_block_material(carve_pos).is_solid() {
                         if y == start.y && rand.next_int_bounded(4) != 0 {
@@ -170,8 +170,10 @@ impl FeatureGenerator for DungeonGenerator {
 
         }
 
-        let mut spawner = SpawnerBlockEntity::default();
-        spawner.entity_kind = self.gen_spawner_entity(rand);
+        let spawner = SpawnerBlockEntity {
+            entity_kind: self.gen_spawner_entity(rand),
+            ..SpawnerBlockEntity::default()
+        };
         world.set_block(pos, block::SPAWNER, 0);
         world.set_block_entity(pos, BlockEntity::Spawner(spawner));
 

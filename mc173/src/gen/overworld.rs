@@ -320,13 +320,13 @@ impl OverworldGenerator {
             for z_noise in 0..NOISE_REAL_WIDTH {
                 for y_noise in 0..NOISE_REAL_HEIGHT {
 
-                    let mut a = terrain.get(x_noise + 0, y_noise + 0, z_noise + 0);
-                    let mut b = terrain.get(x_noise + 0, y_noise + 0, z_noise + 1);
-                    let mut c = terrain.get(x_noise + 1, y_noise + 0, z_noise + 0);
-                    let mut d = terrain.get(x_noise + 1, y_noise + 0, z_noise + 1);
-                    let e = (terrain.get(x_noise + 0, y_noise + 1, z_noise + 0) - a) * 0.125; // Should be vectorized.
-                    let f = (terrain.get(x_noise + 0, y_noise + 1, z_noise + 1) - b) * 0.125;
-                    let g = (terrain.get(x_noise + 1, y_noise + 1, z_noise + 0) - c) * 0.125;
+                    let mut a = terrain.get(x_noise, y_noise, z_noise);
+                    let mut b = terrain.get(x_noise, y_noise, z_noise + 1);
+                    let mut c = terrain.get(x_noise + 1, y_noise, z_noise);
+                    let mut d = terrain.get(x_noise + 1, y_noise, z_noise + 1);
+                    let e = (terrain.get(x_noise, y_noise + 1, z_noise) - a) * 0.125; // Should be vectorized.
+                    let f = (terrain.get(x_noise, y_noise + 1, z_noise + 1) - b) * 0.125;
+                    let g = (terrain.get(x_noise + 1, y_noise + 1, z_noise) - c) * 0.125;
                     let h = (terrain.get(x_noise + 1, y_noise + 1, z_noise + 1) - d) * 0.125;
 
                     for y_index in 0..NOISE_REAL_HEIGHT_STRIDE {

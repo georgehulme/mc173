@@ -24,7 +24,7 @@ fn calc_chunk_meta_index(cx: i32, cz: i32) -> usize {
 }
 
 /// Internal constant empty array of 4K to write an empty sector.
-const EMPTY_SECTOR: &'static [u8; 4096] = &[0; 4096];
+const EMPTY_SECTOR: &[u8; 4096] = &[0; 4096];
 
 /// A handle to a region directory storing all region files.
 pub struct RegionDir {

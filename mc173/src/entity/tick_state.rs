@@ -134,7 +134,7 @@ fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
         for i in 0u8..8 {
             
             let delta = DVec3 {
-                x: (((i >> 0) & 1) as f64 - 0.5) * size_x * 0.9,
+                x: ((i & 1) as f64 - 0.5) * size_x * 0.9,
                 y: (((i >> 1) & 1) as f64 - 0.5) * 0.1 + base.eye_height as f64,
                 z: (((i >> 2) & 1) as f64 - 0.5) * size_z * 0.9,
             };
@@ -160,10 +160,8 @@ fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
         let height = world.get_height(block_pos).unwrap_or(0);
         if block_pos.y >= height {
             let light = common::get_entity_light(world, base);
-            if light.sky_real >= 12 {
-                if base.rand.next_float() * 30.0 < (light.brightness() - 0.4) * 2.0 {
-                    base.fire_time = 300;
-                }
+            if light.sky_real >= 12 && base.rand.next_float() * 30.0 < (light.brightness() - 0.4) * 2.0 {
+                base.fire_time = 300;
             }
         }
     }

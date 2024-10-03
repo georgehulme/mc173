@@ -51,30 +51,34 @@ pub fn from_nbt(comp: NbtCompoundParse) -> Result<(IVec3, Box<BlockEntity>), Nbt
             BlockEntity::Dispenser(dispenser)
         }
         "MobSpawner" => {
-            let mut spawner = SpawnerBlockEntity::default();
-            spawner.entity_kind = entity_kind_nbt::from_nbt(comp.get_string("EntityId")?).unwrap_or(EntityKind::Pig);
-            spawner.remaining_time = comp.get_short("Delay")? as u16;
+            let spawner = SpawnerBlockEntity {
+                entity_kind: entity_kind_nbt::from_nbt(comp.get_string("EntityId")?).unwrap_or(EntityKind::Pig),
+                remaining_time: comp.get_short("Delay")? as u16
+            };
             BlockEntity::Spawner(spawner)
         }
         "Music" => {
-            let mut note_block = NoteBlockBlockEntity::default();
-            note_block.note = comp.get_byte("note")? as u8;
+            let note_block = NoteBlockBlockEntity {
+                note: comp.get_byte("note")? as u8,
+                ..NoteBlockBlockEntity::default()
+            };
             BlockEntity::NoteBlock(note_block)
         }
         "Piston" => {
-            let mut piston = PistonBlockEntity::default();
-            piston.block = comp.get_int("blockId")? as u8;
-            piston.metadata = comp.get_int("blockData")? as u8;
-            piston.face = match comp.get_int("facing")? {
-                0 => Face::NegY,
-                1 => Face::PosY,
-                2 => Face::NegZ,
-                3 => Face::PosZ,
-                4 => Face::NegX,
-                _ => Face::PosX,
+            let piston = PistonBlockEntity {
+                block: comp.get_int("blockId")? as u8,
+                metadata: comp.get_int("blockData")? as u8,
+                face: match comp.get_int("facing")? {
+                    0 => Face::NegY,
+                    1 => Face::PosY,
+                    2 => Face::NegZ,
+                    3 => Face::PosZ,
+                    4 => Face::NegX,
+                    _ => Face::PosX,
+                },
+                progress: comp.get_float("progress")?,
+                extending: comp.get_boolean("extending")?,
             };
-            piston.progress = comp.get_float("progress")?;
-            piston.extending = comp.get_boolean("extending")?;
             BlockEntity::Piston(piston)
         }
         "Sign" => {

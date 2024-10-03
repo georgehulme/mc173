@@ -925,16 +925,13 @@ impl EntityKind {
     /// entity spawning when colliding.
     #[inline]
     pub fn is_hard(self) -> bool {
-        match self {
-            EntityKind::Item |
+        !matches!(self, EntityKind::Item |
             EntityKind::Bobber |
             EntityKind::LightningBolt |
             EntityKind::Arrow |
             EntityKind::Egg |
             EntityKind::Fireball |
-            EntityKind::Snowball => false,
-            _ => true
-        }
+            EntityKind::Snowball)
     }
 
     /// Get the category of this entity kind.

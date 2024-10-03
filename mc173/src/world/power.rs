@@ -169,17 +169,13 @@ impl World {
                 let face_pos = pos + face.delta();
                 if self.is_linkable_from(face_pos, face.opposite()) {
                     links.insert(face);
-                } else {
-                    if let Some((id, _)) = self.get_block(face_pos) {
-                        if !block::material::is_opaque_cube(id) {
-                            if self.is_linkable_from(face_pos - IVec3::Y, Face::PosY) {
-                                links.insert(face);
-                            }
-                        } else if !opaque_above {
-                            if self.is_linkable_from(face_pos + IVec3::Y, Face::NegY) {
-                                links.insert(face);
-                            }
+                } else if let Some((id, _)) = self.get_block(face_pos) {
+                    if !block::material::is_opaque_cube(id) {
+                        if self.is_linkable_from(face_pos - IVec3::Y, Face::PosY) {
+                            links.insert(face);
                         }
+                    } else if !opaque_above && self.is_linkable_from(face_pos + IVec3::Y, Face::NegY) {
+                        links.insert(face);
                     }
                 }
             }

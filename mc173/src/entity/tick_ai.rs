@@ -12,6 +12,10 @@ use super::{Entity, BaseKind, LivingKind, EntityCategory};
 use super::common::{self, let_expect};
 use super::tick_attack;
 
+const RAD_10_DEG: f32 = core::f32::consts::FRAC_PI_6 / 3.0;
+const RAD_20_DEG: f32 = core::f32::consts::FRAC_PI_3 / 3.0;
+const RAD_30_DEG: f32 = core::f32::consts::FRAC_PI_6;
+const RAD_40_DEG: f32 = core::f32::consts::TAU / 9.0;
 
 /// Tick entity "artificial intelligence", like attacking players.
 pub(super) fn tick_ai(world: &mut World, id: u32, entity: &mut Entity) {
@@ -31,13 +35,13 @@ pub(super) fn tick_ai(world: &mut World, id: u32, entity: &mut Entity) {
 fn tick_living_ai(world: &mut World, _id: u32, entity: &mut Entity) {
 
     /// Multiplier for random yaw velocity: 20 deg
-    const YAW_VELOCITY_MUL: f32 = 0.3490658503988659;
+    const YAW_VELOCITY_MUL: f32 = RAD_20_DEG;
     /// Maximum distance for looking at a target.
     const LOOK_AT_MAX_DIST: f64 = 8.0;
     /// Default look step when looking at a target.
-    const LOOK_STEP: Vec2 = Vec2::new(0.17453292519943295, 0.6981317007977318);
+    const LOOK_STEP: Vec2 = Vec2::new(RAD_10_DEG, RAD_40_DEG);
     /// Slow look step used for sitting dogs.
-    const SLOW_LOOK_STEP: Vec2 = Vec2::new(0.17453292519943295, 0.3490658503988659);
+    const SLOW_LOOK_STEP: Vec2 = Vec2::new(RAD_10_DEG, RAD_20_DEG);
 
     let_expect!(Entity(base, BaseKind::Living(living, living_kind)) = entity);
 
@@ -111,7 +115,7 @@ fn tick_ground_ai(world: &mut World, id: u32, entity: &mut Entity) {
     /// Maximum distance for the path finder.
     const PATH_FINDER_MAX_DIST: f32 = 16.0;
     /// Look step when looking at an attacked entity: 30/30 deg
-    const LOOK_STEP: Vec2 = Vec2::new(0.5235987755982988, 0.5235987755982988);
+    const LOOK_STEP: Vec2 = Vec2::new(RAD_30_DEG, RAD_30_DEG);
 
     /// Internal structure that defines the target for the path finder.
     struct Target {
@@ -288,7 +292,7 @@ fn tick_ground_ai(world: &mut World, id: u32, entity: &mut Entity) {
                         let dz = target_base.pos.z - base.pos.z;
                         base.look.x = f64::atan2(dz, dx) as f32 - std::f32::consts::FRAC_PI_2;
                         living.accel_strafing = -base.look.x.sin() * living.accel_forward;
-                        living.accel_forward = base.look.x.cos() * living.accel_forward;
+                        living.accel_forward *= base.look.x.cos();
                     }
                 }
 
@@ -332,7 +336,7 @@ fn tick_ground_ai(world: &mut World, id: u32, entity: &mut Entity) {
 fn tick_slime_ai(world: &mut World, id: u32, entity: &mut Entity) {
 
     /// Look step for slime: 10/20 deg
-    const LOOK_STEP: Vec2 = Vec2::new(0.17453292519943295, 0.3490658503988659);
+    const LOOK_STEP: Vec2 = Vec2::new(RAD_10_DEG, RAD_20_DEG);
     
     if tick_natural_despawn(world, id, entity) {
         return;
@@ -392,7 +396,7 @@ fn tick_ghast_ai(world: &mut World, id: u32, entity: &mut Entity) {
 
     // If we are too close or too far, change the waypoint.
     let dist = (ghast.waypoint - base.pos).length();
-    if dist < 1.0 || dist > 60.0 {
+    if !(1.0..=60.0).contains(&dist) {
         ghast.waypoint = base.pos + ((base.rand.next_float_vec() * 2.0 - 1.0) * 16.0).as_dvec3();
     }
 
@@ -526,7 +530,7 @@ fn tick_squid_ai(world: &mut World, id: u32, entity: &mut Entity) {
 
     let_expect!(Entity(base, BaseKind::Living(_living, LivingKind::Squid(_squid))) = entity);
 
-    if base.rand.next_int_bounded(50) == 0 || !base.in_water || false /* not yet accelerated */ {
+    if base.rand.next_int_bounded(50) == 0 || !base.in_water {
         
         // PARITY: The Notchian implementation uses other variables to control the 
         // acceleration, but here we try to reuse the existing properties. We just pick a 
@@ -564,10 +568,8 @@ fn tick_natural_despawn(world: &mut World, id: u32, entity: &mut Entity) -> bool
     // Increment the interaction time, mobs that are in high brightness locations have
     // faster increment.
     living.wander_time = living.wander_time.saturating_add(1);
-    if living_kind.entity_kind().category() == EntityCategory::Mob {
-        if common::get_entity_light(world, base).brightness() > 0.5 {
-            living.wander_time = living.wander_time.saturating_add(2);
-        }
+    if living_kind.entity_kind().category() == EntityCategory::Mob && common::get_entity_light(world, base).brightness() > 0.5 {
+        living.wander_time = living.wander_time.saturating_add(2);
     }
 
     // We only despawn if there are player in the server, but the entity is not in range.

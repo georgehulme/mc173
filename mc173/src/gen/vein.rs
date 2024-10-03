@@ -80,10 +80,8 @@ impl FeatureGenerator for VeinGenerator {
                         let place_pos = IVec3::new(x, y, z);
                         let delta = (place_pos.as_dvec3() + 0.5 - center_pos) / half_size;
 
-                        if delta.length_squared() < 1.0 {
-                            if world.is_block(place_pos, self.replace_id) {
-                                world.set_block(place_pos, self.place_id, 0);
-                            }
+                        if delta.length_squared() < 1.0 && world.is_block(place_pos, self.replace_id) {
+                            world.set_block(place_pos, self.place_id, 0);
                         }
 
                     }

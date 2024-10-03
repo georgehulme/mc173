@@ -132,13 +132,9 @@ fn tick_creeper_attack(world: &mut World, id: u32, entity: &mut Entity, _target_
 
         }
 
-    } else {
-
-        if creeper.ignited_time.is_some() {
-            world.push_event(Event::Entity { id, inner: EntityEvent::Metadata });
-            creeper.ignited_time = None;
-        }
-
+    } else if creeper.ignited_time.is_some() {
+        world.push_event(Event::Entity { id, inner: EntityEvent::Metadata });
+        creeper.ignited_time = None;
     }
 
 }

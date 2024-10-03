@@ -1,13 +1,12 @@
 //! Cave generation utility.
 
-use glam::{IVec3, DVec3};
+use glam::{DVec3, IVec3};
 
-use crate::rand::JavaRandom;
-use crate::chunk::Chunk;
 use crate::block;
+use crate::chunk::Chunk;
+use crate::rand::JavaRandom;
 
 use super::math::MinecraftMath;
-
 
 /// A cave generator.
 pub struct CaveGenerator {
@@ -15,43 +14,65 @@ pub struct CaveGenerator {
     radius: u8,
 }
 
-impl CaveGenerator {
+struct CaveNodeParameters<'a> {
+    cx: i32,
+    cz: i32,
+    chunk: &'a mut Chunk,
+    chunk_rand: &'a mut JavaRandom,
+    pos: DVec3,
+    start_width: f32,
+    yaw: f32,
+    pitch: f32,
+    offset: i32,
+    length: i32,
+    height_scale: f64,
+}
 
+impl CaveGenerator {
     pub fn new(radius: u8) -> Self {
-        Self {
-            radius,
-        }
+        Self { radius }
     }
 
     /// Generate all caves in the given chunk.
     pub fn generate(&self, cx: i32, cz: i32, chunk: &mut Chunk, seed: i64) {
-
         let mut rand = JavaRandom::new(seed);
 
-        let x_mul = rand.next_long().wrapping_div(2).wrapping_mul(2).wrapping_add(1);
-        let z_mul = rand.next_long().wrapping_div(2).wrapping_mul(2).wrapping_add(1);
+        let x_mul = rand
+            .next_long()
+            .wrapping_div(2)
+            .wrapping_mul(2)
+            .wrapping_add(1);
+        let z_mul = rand
+            .next_long()
+            .wrapping_div(2)
+            .wrapping_mul(2)
+            .wrapping_add(1);
         let radius = self.radius as i32;
 
         for from_cx in cx - radius..=cx + radius {
             for from_cz in cz - radius..=cz + radius {
-                
                 let chunk_seed = i64::wrapping_add(
-                    (from_cx as i64).wrapping_mul(x_mul), 
-                    (from_cz as i64).wrapping_mul(z_mul)
+                    (from_cx as i64).wrapping_mul(x_mul),
+                    (from_cz as i64).wrapping_mul(z_mul),
                 ) ^ seed;
 
                 rand.set_seed(chunk_seed);
                 self.generate_from(from_cx, from_cz, cx, cz, chunk, &mut rand);
-                
             }
         }
-
     }
 
     /// Internal function to generate a cave from a chunk and modify the chunk if that
     /// cave come in.
-    fn generate_from(&self, from_cx: i32, from_cz: i32, cx: i32, cz: i32, chunk: &mut Chunk, rand: &mut JavaRandom) {
-
+    fn generate_from(
+        &self,
+        from_cx: i32,
+        from_cz: i32,
+        cx: i32,
+        cz: i32,
+        chunk: &mut Chunk,
+        rand: &mut JavaRandom,
+    ) {
         let count = rand.next_int_bounded(40);
         let count = rand.next_int_bounded(count + 1);
         let count = rand.next_int_bounded(count + 1);
@@ -61,7 +82,6 @@ impl CaveGenerator {
         }
 
         for _ in 0..count {
-
             let start = IVec3 {
                 x: from_cx * 16 + rand.next_int_bounded(16),
                 y: {
@@ -69,12 +89,25 @@ impl CaveGenerator {
                     rand.next_int_bounded(v + 8)
                 },
                 z: from_cz * 16 + rand.next_int_bounded(16),
-            }.as_dvec3();
+            }
+            .as_dvec3();
 
             let mut normal_count = 1;
             if rand.next_int_bounded(4) == 0 {
                 let start_width = rand.next_float() * 6.0 + 1.0;
-                self.generate_node(cx, cz, chunk, rand, start, start_width, 0.0, 0.0, -1, -1, 0.5);
+                self.generate_node(CaveNodeParameters {
+                    cx,
+                    cz,
+                    chunk,
+                    chunk_rand: rand,
+                    pos: start,
+                    start_width,
+                    yaw: 0.0,
+                    pitch: 0.0,
+                    offset: -1,
+                    length: -1,
+                    height_scale: 0.5,
+                });
                 normal_count += rand.next_int_bounded(4);
             }
 
@@ -82,24 +115,47 @@ impl CaveGenerator {
                 let yaw = rand.next_float() * f32::MC_PI * 2.0;
                 let pitch = (rand.next_float() - 0.5) * 2.0 / 8.0;
                 let start_width = rand.next_float() * 2.0 + rand.next_float();
-                self.generate_node(cx, cz, chunk, rand, start, start_width, yaw, pitch, 0, 0, 1.0);
+                self.generate_node(CaveNodeParameters {
+                    cx,
+                    cz,
+                    chunk,
+                    chunk_rand: rand,
+                    pos: start,
+                    start_width,
+                    yaw,
+                    pitch,
+                    offset: 0,
+                    length: 0,
+                    height_scale: 1.0,
+                });
             }
-
         }
-
     }
 
     /// Generate a cave node with the given properties.
-    fn generate_node(&self, 
-        cx: i32, cz: i32, chunk: &mut Chunk, chunk_rand: &mut JavaRandom,
-        mut pos: DVec3, 
-        start_width: f32, 
-        mut yaw: f32, 
-        mut pitch: f32,
-        mut offset: i32,
-        mut length: i32,
-        height_scale: f64,
-    ) {
+    fn generate_node(&self, params: CaveNodeParameters) {
+        //     cx: i32, cz: i32, chunk: &mut Chunk, chunk_rand: &mut JavaRandom,
+        //     mut pos: DVec3,
+        //     start_width: f32,
+        //     mut yaw: f32,
+        //     mut pitch: f32,
+        //     mut offset: i32,
+        //     mut length: i32,
+        //     height_scale: f64,
+        // ) {
+        let CaveNodeParameters {
+            cx,
+            cz,
+            chunk,
+            chunk_rand,
+            mut pos,
+            start_width,
+            mut yaw,
+            mut pitch,
+            mut offset,
+            mut length,
+            height_scale,
+        } = params;
 
         let cx_mid = (cx * 16 + 8) as f64;
         let cz_mid = (cz * 16 + 8) as f64;
@@ -131,9 +187,10 @@ impl CaveGenerator {
         let mut yaw_scale = 0.0;
 
         'main: for offset in offset..length {
-
             // The sine here is made is used to make the cave less large at the ends.
-            let width = 1.5 + ((offset as f32 * f32::MC_PI / length as f32).mc_sin() * start_width * 1.0) as f64;
+            let width = 1.5
+                + ((offset as f32 * f32::MC_PI / length as f32).mc_sin() * start_width * 1.0)
+                    as f64;
             let height = width * height_scale;
 
             let (pitch_sin, pitch_cos) = pitch.mc_sin_cos();
@@ -159,23 +216,35 @@ impl CaveGenerator {
 
             // Generate two perpendicular nodes to the current offset.
             if !auto_offset && offset == new_nodes_offset && start_width > 1.0 {
+                self.generate_node(CaveNodeParameters {
+                    cx,
+                    cz,
+                    chunk,
+                    chunk_rand,
+                    pos,
+                    start_width: rand.next_float() * 0.5 + 0.5,
+                    yaw: yaw - f32::MC_PI * 0.5,
+                    pitch: pitch / 3.0,
+                    offset,
+                    length,
+                    height_scale: 1.0,
+                });
 
-                self.generate_node(cx, cz, chunk, chunk_rand,
-                    pos, 
-                    rand.next_float() * 0.5 + 0.5, 
-                    yaw - f32::MC_PI * 0.5, 
-                    pitch / 3.0, 
-                    offset, length, 1.0);
+                self.generate_node(CaveNodeParameters {
+                    cx,
+                    cz,
+                    chunk,
+                    chunk_rand,
+                    pos,
+                    start_width: rand.next_float() * 0.5 + 0.5,
+                    yaw: yaw + f32::MC_PI * 0.5,
+                    pitch: pitch / 3.0,
+                    offset,
+                    length,
+                    height_scale: 1.0,
+                });
 
-                self.generate_node(cx, cz, chunk, chunk_rand,
-                    pos, 
-                    rand.next_float() * 0.5 + 0.5, 
-                    yaw + f32::MC_PI * 0.5, 
-                    pitch / 3.0, 
-                    offset, length, 1.0);
-                
                 return;
-
             }
 
             if !auto_offset && rand.next_int_bounded(4) == 0 {
@@ -193,9 +262,13 @@ impl CaveGenerator {
                 return;
             }
 
-            // The following code is used to actually carve the cave into the target 
+            // The following code is used to actually carve the cave into the target
             // chunk, this condition shortcut if we are too far from target chunk.
-            if pos.x < cx_mid - 16.0 - width * 2.0 || pos.z < cz_mid - 16.0 - width * 2.0 || pos.x > cx_mid + 16.0 + width * 2.0 || pos.z > cz_mid + 16.0 + width * 2.0 {
+            if pos.x < cx_mid - 16.0 - width * 2.0
+                || pos.z < cz_mid - 16.0 - width * 2.0
+                || pos.x > cx_mid + 16.0 + width * 2.0
+                || pos.z > cz_mid + 16.0 + width * 2.0
+            {
                 continue;
             }
 
@@ -220,19 +293,24 @@ impl CaveGenerator {
                     let mut by = end.y + 1;
                     while by >= start.y - 1 {
                         if by < 128 {
-
                             let carve_pos = IVec3::new(bx, by, bz);
 
-                            if let (block::WATER_MOVING | block::WATER_STILL, _) = chunk.get_block(carve_pos) {
+                            if let (block::WATER_MOVING | block::WATER_STILL, _) =
+                                chunk.get_block(carve_pos)
+                            {
                                 // Encountered water, do not carve this.
                                 continue 'main;
-                            } else if by != start.y - 1 && bx != start.x && bx != end.x - 1 && bz != start.z && bz != end.z - 1 {
+                            } else if by != start.y - 1
+                                && bx != start.x
+                                && bx != end.x - 1
+                                && bz != start.z
+                                && bz != end.z - 1
+                            {
                                 // NOTE: I don't really understand that...
                                 by = start.y;
                             }
-    
+
                             by -= 1;
-    
                         }
                     }
                 }
@@ -267,7 +345,7 @@ impl CaveGenerator {
 
                         // Read above.
                         if prev_id == block::GRASS {
-                            carving_surface  = true;
+                            carving_surface = true;
                         }
 
                         // Only carve these blocks.
@@ -291,9 +369,7 @@ impl CaveGenerator {
                                 }
                             }
                         }
-
                     }
-
                 }
             }
 
@@ -301,9 +377,6 @@ impl CaveGenerator {
             if auto_offset {
                 break;
             }
-
         }
-
     }
-
 }

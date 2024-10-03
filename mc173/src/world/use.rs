@@ -113,9 +113,7 @@ impl World {
             _ => {}
         }
 
-        if pos.y >= 127 && block::material::get_material(id).is_solid() {
-            return false;
-        } if !self.can_place_block(pos, face, id) {
+        if (pos.y >= 127 && block::material::get_material(id).is_solid()) || (!self.can_place_block(pos, face, id)) {
             return false;
         }
 
@@ -133,9 +131,7 @@ impl World {
             pos += IVec3::Y;
         }
 
-        if pos.y >= 127 {
-            return false;
-        } else if !self.can_place_block(pos, face.opposite(), block_id) {
+        if (pos.y >= 127) || (!self.can_place_block(pos, face.opposite(), block_id)) {
             return false;
         }
 
@@ -205,11 +201,7 @@ impl World {
         let bed_face = Face::from_yaw(look.x);
         let head_pos = pos + bed_face.delta();
 
-        if !matches!(self.get_block(pos), Some((block::AIR, _))) {
-            return false;
-        } else if !matches!(self.get_block(head_pos), Some((block::AIR, _))) {
-            return false;
-        } else if !self.is_block_opaque_cube(pos - IVec3::Y) || !self.is_block_opaque_cube(head_pos - IVec3::Y) {
+        if (!matches!(self.get_block(pos), Some((block::AIR, _)))) || (!matches!(self.get_block(head_pos), Some((block::AIR, _)))) || (!self.is_block_opaque_cube(pos - IVec3::Y) || !self.is_block_opaque_cube(head_pos - IVec3::Y)) {
             return false;
         }
 
@@ -225,9 +217,7 @@ impl World {
 
     fn use_sign_stack(&mut self, mut pos: IVec3, face: Face, entity_id: u32) -> bool {
 
-        if face == Face::NegY {
-            return false;
-        } else if !self.get_block_material(pos).is_solid() {
+        if (face == Face::NegY) || (!self.get_block_material(pos).is_solid()) {
             return false;
         } else {
             pos += face.delta();

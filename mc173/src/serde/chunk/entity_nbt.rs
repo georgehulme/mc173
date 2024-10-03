@@ -17,8 +17,10 @@ use super::slot_nbt;
 
 pub fn from_nbt(comp: NbtCompoundParse) -> Result<Box<Entity>, NbtParseError> {
 
-    let mut base = Base::default();
-    base.persistent = true;
+    let mut base = Base {
+        persistent: true,
+        ..Base::default()
+    };
 
     // Position list.
     for (i, nbt) in comp.get_list("Pos")?.iter().enumerate().take(3) {
@@ -46,9 +48,11 @@ pub fn from_nbt(comp: NbtCompoundParse) -> Result<Box<Entity>, NbtParseError> {
 
             base.lifetime = comp.get_int("Age").unwrap_or_default().max(0) as u32;
             
-            let mut item = e::Item::default();
-            item.health = comp.get_short("Health").unwrap_or_default().max(0) as u16;
-            item.stack = item_stack_nbt::from_nbt(comp.get_compound("Item")?)?;
+            let item = e::Item {
+                health: comp.get_short("Health").unwrap_or_default().max(0) as u16,
+                stack: item_stack_nbt::from_nbt(comp.get_compound("Item")?)?,
+                ..e::Item::default()
+            };
             BaseKind::Item(item)
 
         }
@@ -140,11 +144,13 @@ pub fn from_nbt(comp: NbtCompoundParse) -> Result<Box<Entity>, NbtParseError> {
         "Wolf" => {
 
             
-            let mut living = Living::default();
-            living.health = comp.get_short("Health").unwrap_or(10).max(0) as u16;
-            living.hurt_time = comp.get_short("HurtTime")?.max(0) as u16;
-            living.death_time = comp.get_short("DeathTime")?.max(0) as u16;
-            living.attack_time = comp.get_short("AttackTime")?.max(0) as u16;
+            let living = Living {
+                health: comp.get_short("Health").unwrap_or(10).max(0) as u16,
+                hurt_time: comp.get_short("HurtTime")?.max(0) as u16,
+                death_time: comp.get_short("DeathTime")?.max(0) as u16,
+                attack_time: comp.get_short("AttackTime")?.max(0) as u16,
+                ..Living::default()
+            };
 
             let living_kind = match id {
                 "Creeper" => LivingKind::Creeper(e::Creeper {

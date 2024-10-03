@@ -1,6 +1,5 @@
 //! Various uncategorized utilities.
 
-
 /// A function to better inline the default function call.
 #[inline(always)]
 pub(crate) fn default<T: Default>() -> T {

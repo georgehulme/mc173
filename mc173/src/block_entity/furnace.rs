@@ -46,9 +46,7 @@ impl FurnaceBlockEntity {
         let mut output_stack = smelt::find_smelting_output(input_id, input_damage)?;
 
         if !self.output_stack.is_empty() {
-            if (self.output_stack.id, self.output_stack.damage) != (output_stack.id, output_stack.damage) {
-                return None;
-            } else if self.output_stack.size + output_stack.size > item::from_id(output_stack.id).max_stack_size {
+            if ((self.output_stack.id, self.output_stack.damage) != (output_stack.id, output_stack.damage)) || (self.output_stack.size + output_stack.size > item::from_id(output_stack.id).max_stack_size) {
                 return None;
             } else {
                 output_stack.size += self.output_stack.size;

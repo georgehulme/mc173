@@ -119,16 +119,13 @@ impl FeatureGenerator for BigTreeGenerator {
         // Check that we can grow the main branch.
         let main_branch_from = pos;
         let main_branch_to = pos + IVec3::new(0, height, 0);
-        match self.check_big_tree_branch(world, main_branch_from, main_branch_to) {
-            Some(new_to) => {
-                // If the new length is too short, abort.
-                if new_to.y - pos.y < 6 {
-                    return false;
-                } else {
-                    height = new_to.y - pos.y;
-                }
+        if let Some(new_to) = self.check_big_tree_branch(world, main_branch_from, main_branch_to) {
+            // If the new length is too short, abort.
+            if new_to.y - pos.y < 6 {
+                return false;
+            } else {
+                height = new_to.y - pos.y;
             }
-            None => {}
         }
 
         // Now we grow the main branch and generate all branches.
@@ -163,7 +160,7 @@ impl FeatureGenerator for BigTreeGenerator {
 
                 for _ in 0..nodes_per_height {
 
-                    let length = self.branch_scale * size as f32 * (rand.next_float() + 0.328);
+                    let length = self.branch_scale * size * (rand.next_float() + 0.328);
                     let angle = rand.next_float() * 2.0 * core::f32::consts::PI;
 
                     let leaf_x = (length * angle.sin() + pos.x as f32 + 0.5).floor() as i32;
@@ -178,7 +175,7 @@ impl FeatureGenerator for BigTreeGenerator {
                         // This cause the branch slope to be 45 degrees, we then applies a
                         // slop factor from the config that will eventually reduce or increase
                         // the slope angle.
-                        let horiz_dist = (((pos.x as f32 - leaf_x as f32).powi(2) + (pos.z as f32 - leaf_z as f32).powi(2))).sqrt();
+                        let horiz_dist = ((pos.x as f32 - leaf_x as f32).powi(2) + (pos.z as f32 - leaf_z as f32).powi(2)).sqrt();
                         let leaf_start_delta = horiz_dist * self.branch_slope;
 
                         // Do not go below global start Y.
@@ -286,15 +283,7 @@ impl BigTreeGenerator {
     /// that is not valid for growing a branch.
     /// If none is returned then the branch is fully valid.
     fn check_big_tree_branch(&self, world: &mut World, from: IVec3, to: IVec3) -> Option<IVec3> {
-
-        for pos in BlockLineIter::new(from, to) {
-            if !matches!(world.get_block(pos), Some((block::AIR | block::LEAVES, _))) {
-                return Some(pos);
-            }
-        }
-
-        None
-
+        BlockLineIter::new(from, to).find(|&pos| !matches!(world.get_block(pos), Some((block::AIR | block::LEAVES, _))))
     }
 
     fn calc_big_tree_layer_size(&self, leaf_offset: i32, height: i32) -> f32 {
@@ -318,6 +307,12 @@ impl BigTreeGenerator {
 
 }
 
+impl Default for BigTreeGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct BigTreeNode {
     /// Center of the leaves node.
@@ -332,6 +327,12 @@ pub struct Spruce1TreeGenerator(());
 impl Spruce1TreeGenerator {
     pub fn new() -> Self {
         Self(())
+    }
+}
+
+impl Default for Spruce1TreeGenerator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -406,6 +407,12 @@ pub struct Spruce2TreeGenerator(());
 impl Spruce2TreeGenerator {
     pub fn new() -> Self {
         Self(())
+    }
+}
+
+impl Default for Spruce2TreeGenerator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

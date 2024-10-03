@@ -82,9 +82,7 @@ impl FeatureGenerator for LakeGenerator {
                         let check_pos = pos + IVec3::new(dx as i32, dy as i32, dz as i32);
                         let check_id = world.get_block(check_pos).map(|(id, _)| id).unwrap_or(block::AIR);
                         let check_material = block::material::get_material(check_id);
-                        if dy >= 4 && check_material.is_fluid() {
-                            return false;
-                        } else if dy < 4 && !check_material.is_solid() && check_id != self.fluid_id {
+                        if (dy >= 4 && check_material.is_fluid()) || (dy < 4 && !check_material.is_solid() && check_id != self.fluid_id) {
                             return false;
                         }
                     }
@@ -109,10 +107,8 @@ impl FeatureGenerator for LakeGenerator {
                 for dy in 4..8 {
                     if fill[dx][dz][dy] {
                         let check_pos = pos + IVec3::new(dx as i32, dy as i32 - 1, dz as i32);
-                        if world.is_block(check_pos, block::DIRT) {
-                            if world.get_light(check_pos).sky > 0 {
-                                world.set_block(check_pos, block::GRASS, 0);
-                            }
+                        if world.is_block(check_pos, block::DIRT) && world.get_light(check_pos).sky > 0 {
+                            world.set_block(check_pos, block::GRASS, 0);
                         }
                     }
                 }
@@ -170,12 +166,8 @@ impl LiquidGenerator {
 impl FeatureGenerator for LiquidGenerator {
 
     fn generate(&mut self, world: &mut World, pos: IVec3, _rand: &mut JavaRandom) -> bool {
-        
-        if !world.is_block(pos + IVec3::Y, block::STONE) {
-            return false;
-        } else if !world.is_block(pos - IVec3::Y, block::STONE) {
-            return false;
-        } else if !matches!(world.get_block(pos), Some((block::AIR | block::STONE, _))) {
+
+        if (!world.is_block(pos + IVec3::Y, block::STONE))  || (!world.is_block(pos - IVec3::Y, block::STONE)) || (!matches!(world.get_block(pos), Some((block::AIR | block::STONE, _)))) {
             return false;
         }
 

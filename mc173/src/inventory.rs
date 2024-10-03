@@ -128,7 +128,7 @@ impl<'a> InventoryHandle<'a> {
 
         let item = item::from_id(stack.id);
 
-        for slot in &self.inv[..] {
+        for slot in self.inv.iter() {
             if slot.is_empty() {
                 return true;
             } else if slot.size != 0 && slot.id == stack.id && slot.damage == stack.damage && slot.size < item.max_stack_size {

@@ -157,7 +157,7 @@ impl World {
 
     /// Notification of standard flower subclasses.
     fn notify_flower(&mut self, pos: IVec3, stay_blocks: &[u8]) {
-        if self.get_light(pos).max() >= 8 || false /* block can see sky */ {
+        if self.get_light(pos).max() >= 8 {
             let (below_id, _) = self.get_block(pos - IVec3::Y).unwrap_or((0, 0));
             if stay_blocks.iter().any(|&id| id == below_id) {
                 return;
@@ -194,9 +194,7 @@ impl World {
 
         for face in Face::ALL {
             if let Some((id, _)) = self.get_block(pos + face.delta()) {
-                if face == Face::NegY && block::material::is_normal_cube(id) {
-                    return false;
-                } else if block::material::get_fire_flammability(id) != 0 {
+                if (face == Face::NegY && block::material::is_normal_cube(id)) || (block::material::get_fire_flammability(id) != 0) {
                     return false;
                 }
             }
@@ -866,8 +864,7 @@ impl World {
 
 
 fn is_redstone_block(id: u8) -> bool {
-    match id {
-        block::BUTTON |
+    matches!(id, block::BUTTON |
         block::DETECTOR_RAIL |
         block::LEVER |
         block::WOOD_PRESSURE_PLATE |
@@ -876,7 +873,5 @@ fn is_redstone_block(id: u8) -> bool {
         block::REPEATER_LIT |
         block::REDSTONE_TORCH |
         block::REDSTONE_TORCH_LIT |
-        block::REDSTONE => true,
-        _ => false,
-    }
+        block::REDSTONE)
 }

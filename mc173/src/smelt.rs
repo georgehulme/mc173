@@ -33,7 +33,7 @@ pub fn get_burn_ticks(id: u16) -> u16 {
     }
 }
 
-const RECIPES: &'static [Recipe] = &[
+const RECIPES: &[Recipe] = &[
     Recipe::new(ItemStack::new_block(block::IRON_ORE, 0), ItemStack::new_single(item::IRON_INGOT, 0)),
     Recipe::new(ItemStack::new_block(block::GOLD_ORE, 0), ItemStack::new_single(item::GOLD_INGOT, 0)),
     Recipe::new(ItemStack::new_block(block::DIAMOND_ORE, 0), ItemStack::new_single(item::DIAMOND, 0)),

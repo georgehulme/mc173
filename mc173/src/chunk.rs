@@ -31,7 +31,7 @@ fn calc_3d_index(pos: IVec3) -> usize {
     let x = pos.x as u32 & 0b1111;
     let z = pos.z as u32 & 0b1111;
     let y = pos.y as u32 & 0b1111111;
-    ((x << 11) | (z << 7) | (y << 0)) as usize
+    ((x << 11) | (z << 7) | y) as usize
 }
 
 /// Calculate the index in the chunk's 2D arrays for the given position (local or not).
@@ -40,7 +40,7 @@ fn calc_3d_index(pos: IVec3) -> usize {
 fn calc_2d_index(pos: IVec3) -> usize {
     let x = pos.x as u32 & 0b1111;
     let z = pos.z as u32 & 0b1111;
-    ((z << 4) | (x << 0)) as usize
+    ((z << 4) | x) as usize
 }
 
 /// Calculate the chunk position corresponding to the given block position. This returns

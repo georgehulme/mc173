@@ -31,30 +31,24 @@ impl Biome {
     /// Return true if it is possible to rain in a chunk.
     #[inline]
     pub fn has_rain(self) -> bool {
-        match self {
-            Biome::Desert |
+        !matches!(self, Biome::Desert |
             Biome::IceDesert |
             Biome::Nether |
-            Biome::Sky => false,
-            _ => true
-        }
+            Biome::Sky)
     }
 
     /// Return true if this is snowing in the biome.
     #[inline]
     pub fn has_snow(self) -> bool {
-        match self {
-            Biome::Taiga |
+        matches!(self, Biome::Taiga |
             Biome::IceDesert |
-            Biome::Tundra => true,
-            _ => false
-        }
+            Biome::Tundra)
     }
 
     /// Get the natural entity kinds for the given category and this current biome.
     pub fn natural_entity_kinds(self, category: EntityCategory) -> &'static [NaturalEntityKind] {
         
-        const ANIMALS: &'static [NaturalEntityKind] = &[
+        const ANIMALS: &[NaturalEntityKind] = &[
             NaturalEntityKind::new(EntityKind::Sheep, 12),
             NaturalEntityKind::new(EntityKind::Pig, 10),
             NaturalEntityKind::new(EntityKind::Chicken, 10),
@@ -63,11 +57,11 @@ impl Biome {
             NaturalEntityKind::new(EntityKind::Wolf, 2),
         ];
 
-        const WATER_ANIMALS: &'static [NaturalEntityKind] = &[
+        const WATER_ANIMALS: &[NaturalEntityKind] = &[
             NaturalEntityKind::new(EntityKind::Squid, 10),
         ];
 
-        const MOBS: &'static [NaturalEntityKind] = &[
+        const MOBS: &[NaturalEntityKind] = &[
             NaturalEntityKind::new(EntityKind::Spider, 10),
             NaturalEntityKind::new(EntityKind::Zombie, 10),
             NaturalEntityKind::new(EntityKind::Skeleton, 10),
@@ -75,12 +69,12 @@ impl Biome {
             NaturalEntityKind::new(EntityKind::Slime, 10),
         ];
 
-        const NETHER_MOBS: &'static [NaturalEntityKind] = &[
+        const NETHER_MOBS: &[NaturalEntityKind] = &[
             NaturalEntityKind::new(EntityKind::Ghast, 10),
             NaturalEntityKind::new(EntityKind::PigZombie, 10),
         ];
 
-        const SKY_ANIMALS: &'static [NaturalEntityKind] = &[
+        const SKY_ANIMALS: &[NaturalEntityKind] = &[
             NaturalEntityKind::new(EntityKind::Chicken, 10),
         ];
         

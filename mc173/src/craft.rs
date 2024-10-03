@@ -237,7 +237,7 @@ macro_rules! dye_mix {
     };
 }
 
-const RECIPES: &'static [Recipe] = &[
+const RECIPES: &[Recipe] = &[
     Recipe::new_shaped(PAPER_3,             &[SUGAR_CANES, SUGAR_CANES, SUGAR_CANES], 3),
     Recipe::new_shaped(BOOK,                &[PAPER, PAPER, PAPER], 1),
     Recipe::new_shaped(FENCE_2,             &[STICK, STICK, STICK, STICK, STICK, STICK], 3),
@@ -501,11 +501,9 @@ impl ShapelessRecipe {
         'inv: for stack in inv.iter().copied() {
             if !stack.is_empty() {
                 for (i, pat_stack) in self.pattern.iter().copied().enumerate() {
-                    if pat_matched & (1 << i) == 0 {
-                        if (pat_stack.id, pat_stack.damage) == (stack.id, stack.damage) {
-                            pat_matched |= 1 << i;
-                            continue 'inv;
-                        }
+                    if pat_matched & (1 << i) == 0 && (pat_stack.id, pat_stack.damage) == (stack.id, stack.damage) {
+                        pat_matched |= 1 << i;
+                        continue 'inv;
                     }
                 }
                 // If we land here, we did not found the required item in the pattern.

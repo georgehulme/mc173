@@ -283,7 +283,7 @@ impl<'a> PathFinder<'a> {
             let current_total_distance = current_point.total_distance;
 
             // Try each option to check if this is better than the current one.
-            for option in self.find_path_options(current_pos, to, dist) {
+            self.find_path_options(current_pos, to, dist).into_iter().for_each(|option| {
                 if let Some(option_index) = option {
                     let option_point = &mut self.points[option_index];
                     let added_distance = Self::distance(current_pos, option_point.pos);
@@ -300,7 +300,7 @@ impl<'a> PathFinder<'a> {
                         self.ensure_pending_point(option_index);
                     }
                 }
-            }
+            });
 
         }
 

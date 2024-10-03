@@ -262,6 +262,12 @@ impl NbtCompound {
 
 }
 
+impl Default for NbtCompound {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Manual debug implement to shrink the potential huge byte arrays.
 impl fmt::Debug for Nbt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -310,7 +316,7 @@ fn from_reader_with_type(reader: &mut impl Read, type_id: i8) -> Result<Nbt, Nbt
         NBT_BYTE_ARRAY => {
             
             let len: usize = reader.read_java_int()?.try_into().map_err(|_| NbtError::IllegalLength)?;
-            let mut buf = vec![0u8; len as usize];
+            let mut buf = vec![0u8; len];
             reader.read_exact(&mut buf)?;
             Nbt::ByteArray(buf)
 
@@ -322,7 +328,7 @@ fn from_reader_with_type(reader: &mut impl Read, type_id: i8) -> Result<Nbt, Nbt
             let type_id = reader.read_java_byte()?;
             let len: usize = reader.read_java_int()?.try_into().map_err(|_| NbtError::IllegalLength)?;
 
-            let mut list = Vec::with_capacity(len as usize);
+            let mut list = Vec::with_capacity(len);
             for _ in 0..len {
                 list.push(from_reader_with_type(reader, type_id)?);
             }
@@ -372,10 +378,10 @@ fn to_writer_raw(writer: &mut impl Write, tag: &Nbt) -> Result<(), NbtError> {
             
             let len: i32 = buf.len().try_into().map_err(|_| NbtError::IllegalLength)?;
             writer.write_java_int(len)?;
-            writer.write_all(&buf)?;
+            writer.write_all(buf)?;
 
         }
-        Nbt::String(ref string) => writer.write_java_string8(&string)?,
+        Nbt::String(ref string) => writer.write_java_string8(string)?,
         Nbt::List(ref list) => {
 
             let len: i32 = list.len().try_into().map_err(|_| NbtError::IllegalLength)?;
@@ -395,7 +401,7 @@ fn to_writer_raw(writer: &mut impl Write, tag: &Nbt) -> Result<(), NbtError> {
             
             for (key, tag) in &compound.inner {
                 writer.write_java_byte(get_nbt_type_id(tag))?;
-                writer.write_java_string8(&key)?;
+                writer.write_java_string8(key)?;
                 to_writer_raw(writer, tag)?;
             }
         
@@ -615,6 +621,11 @@ impl<'nbt> NbtListParse<'nbt> {
         self.inner.len()
     }
 
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     #[inline]
     pub fn path(&self) -> &str {
         &self.path
@@ -715,6 +726,11 @@ impl<'nbt> NbtCompoundParse<'nbt> {
     #[inline]
     pub fn len(&self) -> usize {
         self.inner.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     #[inline]

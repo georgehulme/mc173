@@ -108,8 +108,7 @@ pub fn get_material(block: u8) -> Material {
 
 /// Return true if a block is a full cube.
 pub fn is_cube(block: u8) -> bool {
-    match block {
-        block::AIR |
+    !matches!(block, block::AIR |
         block::BED |
         block::PORTAL |
         block::BUTTON |
@@ -156,20 +155,15 @@ pub fn is_cube(block: u8) -> bool {
         block::REDSTONE_TORCH |
         block::REDSTONE_TORCH_LIT |
         block::TRAPDOOR |
-        block::COBWEB => false,
-        _ => true,
-    }
+        block::COBWEB)
 }
 
 /// Return true if a block is a full opaque cube.
 pub fn is_opaque_cube(block: u8) -> bool {
     if is_cube(block) {
-        match block {
-            block::LEAVES |
+        !matches!(block, block::LEAVES |
             block::GLASS |
-            block::ICE => false,
-            _ => true,
-        }
+            block::ICE)
     } else {
         false
     }
