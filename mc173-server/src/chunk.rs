@@ -23,6 +23,12 @@ pub struct ChunkTrackers {
     scheduled_saves: VecDeque<(i32, i32, Instant)>,
 }
 
+impl Default for ChunkTrackers {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChunkTrackers {
 
     /// Construct a new chunk tracker map.

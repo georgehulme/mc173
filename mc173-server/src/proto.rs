@@ -572,6 +572,7 @@ pub struct BlockActionPacket {
     /// - 2: Snare Drum
     /// - 3: Clicks and Sticks (Hihat)
     /// - 4: Bass (String Bass)
+    /// 
     /// For piston:
     /// - 0: Extending
     /// - 1: Retracting
@@ -1265,7 +1266,7 @@ impl net::OutPacket for OutPacket {
                 write.write_java_short(packet.y)?;
                 write.write_java_int(packet.z)?;
                 for line in packet.lines.iter() {
-                    write.write_java_string16(&line)?;
+                    write.write_java_string16(line)?;
                 }
             }
             OutPacket::ItemData(packet) => {
@@ -1344,7 +1345,7 @@ fn write_metadata(write: &mut impl Write, metadata: &Metadata) -> io::Result<()>
         MetadataKind::Short(n) => write.write_java_short(n),
         MetadataKind::Int(n) => write.write_java_int(n),
         MetadataKind::Float(n) => write.write_java_float(n),
-        MetadataKind::String(ref s) => write.write_java_string16(&s),
+        MetadataKind::String(ref s) => write.write_java_string16(s),
         MetadataKind::ItemStack(i) => {
             write.write_java_short(i.id as i16)?;
             write.write_java_byte(i.size as i8)?;

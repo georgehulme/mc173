@@ -28,7 +28,7 @@ pub struct CommandContext<'a> {
 pub fn handle_command(ctx: CommandContext) {
 
     let Some(&cmd_name) = ctx.parts.first() else {
-        ctx.player.send_chat(format!("§eNo command, type help!"));
+        ctx.player.send_chat("§eNo command, type help!".to_string());
         return;
     };
 
@@ -54,7 +54,7 @@ pub fn handle_command(ctx: CommandContext) {
         }
     }
 
-    ctx.player.send_chat(format!("§eUnknown command, type help!"));
+    ctx.player.send_chat("§eUnknown command, type help!".to_string());
 
 }
 
@@ -76,7 +76,7 @@ struct Command {
 }
 
 /// Internal array of commands.
-const COMMANDS: &'static [Command] = &[
+const COMMANDS: &[Command] = &[
     Command {
         name: "help",
         usage: "",
@@ -165,7 +165,7 @@ const COMMANDS: &'static [Command] = &[
 
 fn cmd_help(ctx: CommandContext) -> CommandResult {
 
-    ctx.player.send_chat(format!("§8====================================================="));
+    ctx.player.send_chat("§8=====================================================".to_string());
     
     for cmd in COMMANDS {
         if cmd.usage.is_empty() {
@@ -294,7 +294,7 @@ fn cmd_weather(ctx: CommandContext) -> CommandResult {
 
 fn cmd_pos(ctx: CommandContext) -> CommandResult { 
     
-    ctx.player.send_chat(format!("§8====================================================="));
+    ctx.player.send_chat("§8=====================================================".to_string());
 
     let block_pos = ctx.player.pos.floor().as_ivec3();
     ctx.player.send_chat(format!("§aReal:§r {}", ctx.player.pos));
@@ -383,7 +383,7 @@ fn cmd_path(ctx: CommandContext) -> CommandResult {
         Ok(())
 
     } else {
-        Err(Some(format!("§cError: path not found")))
+        Err(Some("§cError: path not found".to_string()))
     }
 
 }
@@ -391,17 +391,17 @@ fn cmd_path(ctx: CommandContext) -> CommandResult {
 fn cmd_tick(ctx: CommandContext) -> CommandResult { 
     match ctx.parts {
         ["freeze"] => {
-            ctx.player.send_chat(format!("§aWorld ticking:§r freeze"));
+            ctx.player.send_chat("§aWorld ticking:§r freeze".to_string());
             ctx.world.tick_mode = TickMode::Manual(0);
             Ok(())
         }
         ["auto"] => {
-            ctx.player.send_chat(format!("§aWorld ticking:§r auto"));
+            ctx.player.send_chat("§aWorld ticking:§r auto".to_string());
             ctx.world.tick_mode = TickMode::Auto;
             Ok(())
         }
         ["step"] => {
-            ctx.player.send_chat(format!("§aWorld ticking:§r step"));
+            ctx.player.send_chat("§aWorld ticking:§r step".to_string());
             ctx.world.tick_mode = TickMode::Manual(1);
             Ok(())
         }
@@ -415,7 +415,7 @@ fn cmd_tick(ctx: CommandContext) -> CommandResult {
             Ok(())
 
         }
-        _ => return Err(None)
+        _ => Err(None)
     }
 }
 
@@ -445,7 +445,7 @@ fn cmd_explode(ctx: CommandContext) -> CommandResult {
 
 fn cmd_perf(ctx: CommandContext) -> CommandResult { 
 
-    ctx.player.send_chat(format!("§8====================================================="));
+    ctx.player.send_chat("§8=====================================================".to_string());
     ctx.player.send_chat(format!("§aTick duration:§r {:.1} ms", ctx.world.tick_duration.get() * 1000.0));
     ctx.player.send_chat(format!("§aTick interval:§r {:.1} ms", ctx.world.tick_interval.get() * 1000.0));
     ctx.player.send_chat(format!("§aEvents:§r {:.1} ({:.1} kB)", ctx.world.events_count.get(), ctx.world.events_count.get() * mem::size_of::<Event>() as f32 / 1000.0));
@@ -479,10 +479,10 @@ fn cmd_entity(ctx: CommandContext) -> CommandResult {
         .map_err(|_| format!("§cError: invalid entity id:§r {id_raw}"))?;
 
     let Some(Entity(base, base_kind)) = ctx.world.world.get_entity(id) else {
-        return Err(Some(format!("§cError: unknown entity")));
+        return Err(Some("§cError: unknown entity".to_string()));
     };
 
-    ctx.player.send_chat(format!("§8====================================================="));
+    ctx.player.send_chat("§8=====================================================".to_string());
 
     ctx.player.send_chat(format!("§aKind:§r {:?} §8| §aPersistent:§r {} §8| §aLifetime:§r {}", 
         base_kind.entity_kind(), base.persistent, base.lifetime));
@@ -531,7 +531,7 @@ fn cmd_entity(ctx: CommandContext) -> CommandResult {
 
 fn cmd_ib(ctx: CommandContext) -> CommandResult {
 
-    if ctx.parts.len() != 0 {
+    if !ctx.parts.is_empty() {
         return Err(None);
     }
 

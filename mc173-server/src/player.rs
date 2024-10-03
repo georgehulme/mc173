@@ -218,8 +218,8 @@ impl ServerPlayer {
 
     /// Handle a chat message packet.
     fn handle_chat(&mut self, sw: &mut ServerWorld, message: String) {
-        if message.starts_with('/') {
-            let parts = message[1..].split_whitespace().collect::<Vec<_>>();
+        if let Some(command_str) = message.strip_prefix('/') {
+            let parts = command_str.split_whitespace().collect::<Vec<_>>();
             command::handle_command(CommandContext {
                 parts: &parts,
                 world: sw,
@@ -422,18 +422,16 @@ impl ServerPlayer {
 
     /// Handle a hand slot packet.
     fn handle_hand_slot(&mut self, sw: &mut ServerWorld, slot: i16) {
-        if slot >= 0 && slot < 9 {
+        if (0..9).contains(&slot) {
 
             // If the previous item was a fishing rod, then we ensure that the bobber id
             // is unset from the player's entity, so that the bobber will be removed.
             let prev_stack = self.main_inv[self.hand_slot as usize];
             if prev_stack.size != 0 && prev_stack.id == item::FISHING_ROD {
-                if prev_stack.id == item::FISHING_ROD {
 
-                    let Entity(base, _) = sw.world.get_entity_mut(self.entity_id).expect("incoherent player entity");
-                    base.bobber_id = None;
-                    
-                }
+                let Entity(base, _) = sw.world.get_entity_mut(self.entity_id).expect("incoherent player entity");
+                base.bobber_id = None;
+                
             }
 
             self.hand_slot = slot as u8;
@@ -540,7 +538,7 @@ impl ServerPlayer {
                             slot_notify = SlotNotify::None;
                         }
 
-                    } else if slot >= 1 && slot <= 4 {
+                    } else if (1..=4).contains(&slot) {
 
                         // Craft matrix
                         let stack = match slot {
@@ -951,9 +949,7 @@ impl ServerPlayer {
                 origin_id: Some(self.entity_id),
             });
 
-        } else {
-            
-        }
+        } 
 
     }
 
@@ -1046,7 +1042,7 @@ impl ServerPlayer {
                 self.send(OutPacket::WindowOpen(proto::WindowOpenPacket {
                     window_id,
                     inventory_type: 2,
-                    title: format!("Furnace"),
+                    title: "Furnace".to_string(),
                     slots_count: 3,
                 }));
                 
@@ -1087,7 +1083,7 @@ impl ServerPlayer {
                 self.send(OutPacket::WindowOpen(proto::WindowOpenPacket {
                     window_id,
                     inventory_type: 3,
-                    title: format!("Dispenser"),
+                    title: "Dispenser".to_string(),
                     slots_count: 9,
                 }));
 
@@ -1688,7 +1684,7 @@ impl<'a> SlotHandle<'a> {
                 craft_inv, 
                 craft_tracker,
             } => {
-                craft_tracker.consume(*craft_inv);
+                craft_tracker.consume(craft_inv);
             }
         }
 

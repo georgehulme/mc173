@@ -417,7 +417,7 @@ impl EntityTracker {
             x: self.sent_pos.0, 
             y: self.sent_pos.1, 
             z: self.sent_pos.2, 
-            velocity: vel.then(|| self.sent_vel)
+            velocity: vel.then_some(self.sent_vel)
         }));
     }
 
@@ -480,7 +480,7 @@ impl EntityTracker {
                     ],
                     LivingKind::Wolf(wolf) => vec![
                         proto::Metadata::new_byte(16, 
-                            ((wolf.sitting as i8) << 0) |
+                            (wolf.sitting as i8) |
                             ((wolf.angry as i8) << 1) |
                             ((wolf.owner.is_some() as i8) << 2))
                     ],

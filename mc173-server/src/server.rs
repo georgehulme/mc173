@@ -194,7 +194,7 @@ impl Server {
     fn handle_login(&mut self, client: NetworkClient, packet: proto::InLoginPacket) {
 
         if packet.protocol_version != 14 {
-            self.send_disconnect(client, format!("Protocol version mismatch!"));
+            self.send_disconnect(client, "Protocol version mismatch!".to_string());
             return;
         }
 
@@ -212,9 +212,7 @@ impl Server {
             });
 
         let (world_index, state) = self.worlds.iter_mut()
-            .enumerate()
-            .filter(|(_, state)| state.world.name == offline_player.world)
-            .next()
+            .enumerate().find(|(_, state)| state.world.name == offline_player.world)
             .expect("invalid offline player world name");
 
         let entity = e::Human::new_with(|base, living, player| {
@@ -265,7 +263,7 @@ impl Server {
         }
 
         // Finally insert the player tracker.
-        let mut player = ServerPlayer::new(&self.net, client, entity_id, packet.username, &offline_player);
+        let mut player = ServerPlayer::new(&self.net, client, entity_id, packet.username, offline_player);
         state.world.handle_player_join(&mut player);
         let player_index = state.players.len();
         state.players.push(player);

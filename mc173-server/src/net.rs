@@ -373,7 +373,7 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
             // TODO: Handle packet not found in a fully filled buffer.
             let buf = &client.buf[..client.buf_cursor];
 
-            if buf.len() == 0 {
+            if buf.is_empty() {
                 return Ok(true);
             }
 
@@ -387,7 +387,6 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
             }
 
             let read_length = cursor.position() as usize;
-            drop(cursor);
 
             // Remove the buffer part that we successfully read.
             client.buf.copy_within(read_length..client.buf_cursor, 0);
