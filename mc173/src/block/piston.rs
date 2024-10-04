@@ -2,7 +2,6 @@
 
 use crate::geom::Face;
 
-
 /// Get the facing of the piston base or extension.
 #[inline]
 pub fn get_face(metadata: u8) -> Option<Face> {
@@ -13,7 +12,7 @@ pub fn get_face(metadata: u8) -> Option<Face> {
         3 => Face::PosZ,
         4 => Face::NegX,
         5 => Face::PosX,
-        _ => return None
+        _ => return None,
     })
 }
 
@@ -40,7 +39,7 @@ pub fn set_base_extended(metadata: &mut u8, extended: bool) {
 /// Get if a piston extension is sticky or not.
 #[inline]
 pub fn is_ext_sticky(metadata: u8) -> bool {
-    is_base_extended(metadata)  // Same bit so we use same function
+    is_base_extended(metadata) // Same bit so we use same function
 }
 
 /// Set a piston extension to be sticky or not.

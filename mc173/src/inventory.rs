@@ -2,9 +2,8 @@
 
 use std::ops::Range;
 
-use crate::item::ItemStack;
 use crate::item;
-
+use crate::item::ItemStack;
 
 /// An inventory handle is used to assists item insertion into inventory. It also record
 /// stack indices that have changed and therefore allows selective events.
@@ -14,15 +13,11 @@ pub struct InventoryHandle<'a> {
 }
 
 impl<'a> InventoryHandle<'a> {
-
     /// Construct a new inventory handle to a slice of item stacks. This functions panics
     /// if the given slice is bigger than 64 stacks.
     pub fn new(inv: &'a mut [ItemStack]) -> Self {
         assert!(inv.len() <= 64);
-        Self {
-            inv,
-            changes: 0,
-        }
+        Self { inv, changes: 0 }
     }
 
     /// Get the item stack at the given index.
@@ -41,16 +36,16 @@ impl<'a> InventoryHandle<'a> {
     }
 
     /// Add an item to the inventory, starting by the first slots.
-    /// 
-    /// The given item stack is modified according to the amount of items actually added 
+    ///
+    /// The given item stack is modified according to the amount of items actually added
     /// to the inventory, its size will be set to zero if fully consumed.
     pub fn push_front(&mut self, stack: &mut ItemStack) {
         self.push(stack, 0..self.inv.len(), false);
     }
 
     /// Add an item to the inventory, starting from the last slots.
-    /// 
-    /// The given item stack is modified according to the amount of items actually added 
+    ///
+    /// The given item stack is modified according to the amount of items actually added
     /// to the inventory, its size will be set to zero if fully consumed.
     pub fn push_back(&mut self, stack: &mut ItemStack) {
         self.push(stack, 0..self.inv.len(), true);
@@ -70,7 +65,6 @@ impl<'a> InventoryHandle<'a> {
     /// amount of items actually added to the inventory, its size will be set to zero if
     /// fully consumed.
     fn push(&mut self, stack: &mut ItemStack, range: Range<usize>, back: bool) {
-
         // Do nothing if stack size is 0 or the item is air.
         if stack.is_empty() {
             return;
@@ -80,12 +74,19 @@ impl<'a> InventoryHandle<'a> {
 
         // Only accumulate of stack size is greater than 1.
         if item.max_stack_size > 1 {
-
             let mut range = range.clone();
-            while let Some(index) = if back { range.next_back() } else { range.next() } {
+            while let Some(index) = if back {
+                range.next_back()
+            } else {
+                range.next()
+            } {
                 let slot = &mut self.inv[index];
                 // If the slot is of the same item and has space left in the stack size.
-                if slot.size != 0 && slot.id == stack.id && slot.damage == stack.damage && slot.size < item.max_stack_size {
+                if slot.size != 0
+                    && slot.id == stack.id
+                    && slot.damage == stack.damage
+                    && slot.size < item.max_stack_size
+                {
                     let available = item.max_stack_size - slot.size;
                     let to_add = available.min(stack.size);
                     slot.size += to_add;
@@ -98,13 +99,16 @@ impl<'a> InventoryHandle<'a> {
                     }
                 }
             }
-
         }
 
         // If we land here, some items are remaining to insert in the empty slots.
         // We can also land here if the item has damage value. We search empty slots.
         let mut range = range.clone();
-        while let Some(index) = if back { range.next_back() } else { range.next() } {
+        while let Some(index) = if back {
+            range.next_back()
+        } else {
+            range.next()
+        } {
             let slot = &mut self.inv[index];
             if slot.is_empty() {
                 // We found an empty slot, insert the whole remaining stack size.
@@ -114,13 +118,11 @@ impl<'a> InventoryHandle<'a> {
                 return;
             }
         }
-        
     }
 
     /// Test if the given item can be pushed in this inventory. If true is returned, a
     /// call to `push_*` function is guaranteed to fully consume the stack.
     pub fn can_push(&self, mut stack: ItemStack) -> bool {
-
         // Do nothing if stack size is 0 or the item is air.
         if stack.is_empty() {
             return true;
@@ -131,7 +133,11 @@ impl<'a> InventoryHandle<'a> {
         for slot in self.inv.iter() {
             if slot.is_empty() {
                 return true;
-            } else if slot.size != 0 && slot.id == stack.id && slot.damage == stack.damage && slot.size < item.max_stack_size {
+            } else if slot.size != 0
+                && slot.id == stack.id
+                && slot.damage == stack.damage
+                && slot.size < item.max_stack_size
+            {
                 let available = item.max_stack_size - slot.size;
                 let to_add = available.min(stack.size);
                 stack.size -= to_add;
@@ -142,12 +148,10 @@ impl<'a> InventoryHandle<'a> {
         }
 
         false
-
     }
 
     /// Consume the equivalent of the given item stack, returning true if successful.
     pub fn consume(&mut self, stack: ItemStack) -> bool {
-        
         for (index, slot) in self.inv.iter_mut().enumerate() {
             if slot.id == stack.id && slot.damage == stack.damage && slot.size >= stack.size {
                 slot.size -= stack.size;
@@ -155,9 +159,8 @@ impl<'a> InventoryHandle<'a> {
                 return true;
             }
         }
-        
-        false
 
+        false
     }
 
     /// Get an iterator for changes that happened in this inventory.
@@ -167,9 +170,7 @@ impl<'a> InventoryHandle<'a> {
             count: 0,
         }
     }
-
 }
-
 
 /// An iterator of changes that happened to an inventory.
 pub struct ChangesIter {
@@ -178,11 +179,9 @@ pub struct ChangesIter {
 }
 
 impl Iterator for ChangesIter {
-
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        
         while self.count < 64 {
             let ret = ((self.changes & 1) != 0).then_some(self.count as usize);
             self.changes >>= 1;
@@ -193,7 +192,5 @@ impl Iterator for ChangesIter {
         }
 
         None
-
     }
-
 }

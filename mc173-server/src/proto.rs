@@ -1,16 +1,16 @@
 //! Minecraft Beta 1.7.3 network protocol definition.
 
-use std::io::{Read, self, Write};
 use std::fmt::Arguments;
+use std::io::{self, Read, Write};
 use std::sync::Arc;
 
-use glam::{DVec3, Vec2, IVec3};
+use glam::{DVec3, IVec3, Vec2};
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
 use mc173::io::{ReadJavaExt, WriteJavaExt};
-use mc173::util::split_at_utf8_boundary;
 use mc173::item::ItemStack;
+use mc173::util::split_at_utf8_boundary;
 
 use crate::net;
 
@@ -77,7 +77,7 @@ pub enum OutPacket {
     Chat(ChatPacket),
     /// Update the world's time of the client.
     UpdateTime(UpdateTimePacket),
-    /// Sent after a player spawn packet to setup each of the 5 slots (held item and 
+    /// Sent after a player spawn packet to setup each of the 5 slots (held item and
     /// armor slots) with the items.
     PlayerInventory(PlayerInventoryPacket),
     /// Set the spawn position for the compass to point to.
@@ -203,7 +203,7 @@ pub struct InHandshakePacket {
 /// Packet 2 (client-bound)
 #[derive(Debug, Clone)]
 pub struct OutHandshakePacket {
-    /// Server identifier that accepted the player handshake. This equals '-' in 
+    /// Server identifier that accepted the player handshake. This equals '-' in
     /// offline mode.
     pub server: String,
 }
@@ -572,7 +572,7 @@ pub struct BlockActionPacket {
     /// - 2: Snare Drum
     /// - 3: Clicks and Sticks (Hihat)
     /// - 4: Bass (String Bass)
-    /// 
+    ///
     /// For piston:
     /// - 0: Extending
     /// - 1: Retracting
@@ -602,11 +602,11 @@ pub struct EffectPlayPacket {
     /// - 1000: Play sound 'random.click' with pitch 1.0
     /// - 1001: Play sound 'random.click' with pitch 1.2
     /// - 1002: Play sound 'random.bow' with pitch 1.2
-    /// - 1003: Play sound randomly between 'random.door_open' and 'random.door_close' 
+    /// - 1003: Play sound randomly between 'random.door_open' and 'random.door_close'
     ///         with random uniform pitch between 0.9 and 1.0
     /// - 1004: Play sound 'random.fizz' with volume 0.5 and random pitch
     /// - 1005: Play record sound, the record item id is given in effect data
-    /// - 2000: Spawn smoke particles, the radius is given in effect data with two bits 
+    /// - 2000: Spawn smoke particles, the radius is given in effect data with two bits
     ///         for X and Z axis, like this: `0bZZXX`
     /// - 2001: Play and show block break sound and particles, the block id is given in
     ///         effect data.
@@ -753,49 +753,62 @@ pub enum MetadataKind {
 }
 
 impl Metadata {
-
     #[inline]
     pub fn new_byte(id: u8, value: i8) -> Self {
-        Self { id, kind: MetadataKind::Byte(value) }
+        Self {
+            id,
+            kind: MetadataKind::Byte(value),
+        }
     }
 
     #[inline]
     pub fn new_short(id: u8, value: i16) -> Self {
-        Self { id, kind: MetadataKind::Short(value) }
+        Self {
+            id,
+            kind: MetadataKind::Short(value),
+        }
     }
 
     #[inline]
     pub fn new_int(id: u8, value: i32) -> Self {
-        Self { id, kind: MetadataKind::Int(value) }
+        Self {
+            id,
+            kind: MetadataKind::Int(value),
+        }
     }
 
     #[inline]
     pub fn new_float(id: u8, value: f32) -> Self {
-        Self { id, kind: MetadataKind::Float(value) }
+        Self {
+            id,
+            kind: MetadataKind::Float(value),
+        }
     }
 
     #[inline]
     pub fn new_item_stack(id: u8, value: ItemStack) -> Self {
-        Self { id, kind: MetadataKind::ItemStack(value) }
+        Self {
+            id,
+            kind: MetadataKind::ItemStack(value),
+        }
     }
 
     #[inline]
     pub fn new_position(id: u8, value: IVec3) -> Self {
-        Self { id, kind: MetadataKind::Position(value) }
+        Self {
+            id,
+            kind: MetadataKind::Position(value),
+        }
     }
-
 }
 
-
 impl net::InPacket for InPacket {
-
     fn read(read: &mut impl Read) -> io::Result<Self> {
         Ok(match read.read_u8()? {
             0 => InPacket::KeepAlive,
             1 => {
-
                 let packet = InPacket::Login(InLoginPacket {
-                    protocol_version: read.read_java_int()?, 
+                    protocol_version: read.read_java_int()?,
                     username: read.read_java_string16(16)?,
                 });
 
@@ -804,12 +817,11 @@ impl net::InPacket for InPacket {
                 let _dimension = read.read_java_byte()?;
 
                 packet
-
             }
             2 => InPacket::Handshake(InHandshakePacket {
-                username: read.read_java_string16(16)?
+                username: read.read_java_string16(16)?,
             }),
-            3 => InPacket::Chat(ChatPacket { 
+            3 => InPacket::Chat(ChatPacket {
                 message: read.read_java_string16(119)?,
             }),
             7 => InPacket::Interact(InteractPacket {
@@ -840,7 +852,7 @@ impl net::InPacket for InPacket {
                 let pitch = read.read_java_float()?;
                 let on_ground = read.read_java_boolean()?;
                 InPacket::Look(LookPacket {
-                    look: Vec2::new(yaw, pitch), 
+                    look: Vec2::new(yaw, pitch),
                     on_ground,
                 })
             }
@@ -918,15 +930,12 @@ impl net::InPacket for InPacket {
             id => return Err(new_invalid_packet_err(format_args!("unknown id {id}"))),
         })
     }
-
 }
 
 impl net::OutPacket for OutPacket {
-
     fn write(&self, write: &mut impl Write) -> io::Result<()> {
-
         // println!("Encode packet: {self:?}");
-        
+
         match self {
             OutPacket::KeepAlive => write.write_u8(0)?,
             OutPacket::Login(packet) => {
@@ -961,7 +970,7 @@ impl net::OutPacket for OutPacket {
                     write.write_java_short(0)?;
                 }
             }
-            OutPacket::SpawnPosition(packet)=> {
+            OutPacket::SpawnPosition(packet) => {
                 write.write_u8(6)?;
                 write.write_java_int(packet.pos.x)?;
                 write.write_java_int(packet.pos.y)?;
@@ -1164,7 +1173,9 @@ impl net::OutPacket for OutPacket {
                 write.write_java_int(packet.cz)?;
                 write.write_java_short(packet.blocks.len() as i16)?;
                 for block in &packet.blocks[..] {
-                    let raw_pos = ((block.x as u16 & 15) << 12) | ((block.z as u16 & 15) << 8) | (block.y as u16 & 255);
+                    let raw_pos = ((block.x as u16 & 15) << 12)
+                        | ((block.z as u16 & 15) << 8)
+                        | (block.y as u16 & 255);
                     write.write_java_short(raw_pos as i16)?;
                 }
                 for block in &packet.blocks[..] {
@@ -1273,7 +1284,7 @@ impl net::OutPacket for OutPacket {
                 write.write_u8(131)?;
                 write.write_java_short(packet.id as i16)?;
                 write.write_java_short(packet.damage as i16)?;
-                
+
                 let len = u8::try_from(packet.data.len())
                     .map_err(|_| new_invalid_packet_err(format_args!("too much item data")))?;
 
@@ -1292,15 +1303,15 @@ impl net::OutPacket for OutPacket {
         }
 
         Ok(())
-
     }
-
 }
-
 
 /// Return an invalid data io error with specific message.
 fn new_invalid_packet_err(format: Arguments) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, format!("invalid packet: {format}"))
+    io::Error::new(
+        io::ErrorKind::InvalidData,
+        format!("invalid packet: {format}"),
+    )
 }
 
 fn read_item_stack(read: &mut impl Read) -> io::Result<Option<ItemStack>> {
@@ -1318,8 +1329,8 @@ fn read_item_stack(read: &mut impl Read) -> io::Result<Option<ItemStack>> {
 
 fn write_item_stack(write: &mut impl Write, item_stack: Option<ItemStack>) -> io::Result<()> {
     if let Some(item_stack) = item_stack {
-        write.write_java_short(item_stack.id as i16)?;  // TODO: Do not overflow!
-        write.write_java_byte(item_stack.size as i8)?;  // TODO: Do not overflow!
+        write.write_java_short(item_stack.id as i16)?; // TODO: Do not overflow!
+        write.write_java_byte(item_stack.size as i8)?; // TODO: Do not overflow!
         write.write_java_short(item_stack.damage as i16)
     } else {
         write.write_java_short(-1)
@@ -1327,7 +1338,6 @@ fn write_item_stack(write: &mut impl Write, item_stack: Option<ItemStack>) -> io
 }
 
 fn write_metadata(write: &mut impl Write, metadata: &Metadata) -> io::Result<()> {
-    
     let kind_index: u8 = match metadata.kind {
         MetadataKind::Byte(_) => 0,
         MetadataKind::Short(_) => 1,
@@ -1357,7 +1367,6 @@ fn write_metadata(write: &mut impl Write, metadata: &Metadata) -> io::Result<()>
             write.write_java_int(pos.z)
         }
     }
-
 }
 
 fn write_metadata_list(write: &mut impl Write, list: &[Metadata]) -> io::Result<()> {

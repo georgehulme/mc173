@@ -2,21 +2,19 @@
 
 use glam::IVec3;
 
-use crate::entity::{self as e, 
-    Entity, 
-    Base, BaseKind, Projectile, ProjectileKind, Living, LivingKind};
+use crate::entity::{
+    self as e, Base, BaseKind, Entity, Living, LivingKind, Projectile, ProjectileKind,
+};
 
-use crate::serde::nbt::{NbtCompoundParse, NbtCompound, NbtParseError};
-use crate::item::ItemStack;
 use crate::geom::Face;
+use crate::item::ItemStack;
+use crate::serde::nbt::{NbtCompound, NbtCompoundParse, NbtParseError};
 
 use super::item_stack_nbt;
 use super::painting_art_nbt;
 use super::slot_nbt;
 
-
 pub fn from_nbt(comp: NbtCompoundParse) -> Result<Box<Entity>, NbtParseError> {
-
     let mut base = Base {
         persistent: true,
         ..Base::default()
@@ -45,16 +43,14 @@ pub fn from_nbt(comp: NbtCompoundParse) -> Result<Box<Entity>, NbtParseError> {
     let id = comp.get_string("id")?;
     let base_kind = match id {
         "Item" => {
-
             base.lifetime = comp.get_int("Age").unwrap_or_default().max(0) as u32;
-            
+
             let item = e::Item {
                 health: comp.get_short("Health").unwrap_or_default().max(0) as u16,
                 stack: item_stack_nbt::from_nbt(comp.get_compound("Item")?)?,
                 ..e::Item::default()
             };
             BaseKind::Item(item)
-
         }
         "Painting" => BaseKind::Painting(e::Painting {
             block_pos: IVec3 {
@@ -78,27 +74,21 @@ pub fn from_nbt(comp: NbtCompoundParse) -> Result<Box<Entity>, NbtParseError> {
             block_id: comp.get_byte("Tile")? as u8,
             ..Default::default()
         }),
-        "Minecart" => {
-            BaseKind::Minecart(match comp.get_int("Type")? {
-                1 => {
-                    let mut inv: Box<[ItemStack; 27]> = Box::default();
-                    slot_nbt::from_nbt_to_inv(comp.get_list("Items")?, &mut inv[..])?;
-                    e::Minecart::Chest { inv }
-                }
-                2 => {
-                    e::Minecart::Furnace { 
-                        fuel: comp.get_short("fuel")?.max(0) as u32,
-                        push_x: comp.get_double("PushX")?,
-                        push_z: comp.get_double("PushZ")?,
-                    }
-                }
-                _ => e::Minecart::Normal
-            })
-        }
+        "Minecart" => BaseKind::Minecart(match comp.get_int("Type")? {
+            1 => {
+                let mut inv: Box<[ItemStack; 27]> = Box::default();
+                slot_nbt::from_nbt_to_inv(comp.get_list("Items")?, &mut inv[..])?;
+                e::Minecart::Chest { inv }
+            }
+            2 => e::Minecart::Furnace {
+                fuel: comp.get_short("fuel")?.max(0) as u32,
+                push_x: comp.get_double("PushX")?,
+                push_z: comp.get_double("PushZ")?,
+            },
+            _ => e::Minecart::Normal,
+        }),
         "Boat" => BaseKind::Boat(e::Boat::default()),
-        "Arrow" |
-        "Snowball" => {
-
+        "Arrow" | "Snowball" => {
             let mut projectile = Projectile::default();
 
             if comp.get_boolean("inGround")? {
@@ -107,8 +97,8 @@ pub fn from_nbt(comp: NbtCompoundParse) -> Result<Box<Entity>, NbtParseError> {
                         x: comp.get_short("xTile")? as i32,
                         y: comp.get_short("yTile")? as i32,
                         z: comp.get_short("zTile")? as i32,
-                    }, 
-                    block: comp.get_byte("inTile")? as u8, 
+                    },
+                    block: comp.get_byte("inTile")? as u8,
                     metadata: comp.get_byte("inData")? as u8,
                 });
             }
@@ -116,34 +106,17 @@ pub fn from_nbt(comp: NbtCompoundParse) -> Result<Box<Entity>, NbtParseError> {
             projectile.shake = comp.get_byte("shake")?.max(0) as u8;
 
             let projectile_kind = match id {
-                "Arrow" => {
-                    ProjectileKind::Arrow(e::Arrow {
-                        from_player: comp.get_boolean("player").unwrap_or_default(),
-                    })
-                }
+                "Arrow" => ProjectileKind::Arrow(e::Arrow {
+                    from_player: comp.get_boolean("player").unwrap_or_default(),
+                }),
                 "Snowball" => ProjectileKind::Snowball(e::Snowball::default()),
-                _ => unreachable!()
+                _ => unreachable!(),
             };
 
             BaseKind::Projectile(projectile, projectile_kind)
-
         }
-        "Creeper" |
-        "Skeleton" |
-        "Spider" |
-        "Giant" |
-        "Zombie" |
-        "Slime" |
-        "Ghast" |
-        "PigZombie" |
-        "Pig" |
-        "Sheep" |
-        "Cow" |
-        "Chicken" |
-        "Squid" |
-        "Wolf" => {
-
-            
+        "Creeper" | "Skeleton" | "Spider" | "Giant" | "Zombie" | "Slime" | "Ghast"
+        | "PigZombie" | "Pig" | "Sheep" | "Cow" | "Chicken" | "Squid" | "Wolf" => {
             let living = Living {
                 health: comp.get_short("Health").unwrap_or(10).max(0) as u16,
                 hurt_time: comp.get_short("HurtTime")?.max(0) as u16,
@@ -187,29 +160,30 @@ pub fn from_nbt(comp: NbtCompoundParse) -> Result<Box<Entity>, NbtParseError> {
                         (!owner.is_empty()).then(|| owner.to_string())
                     },
                 }),
-                _ => unreachable!()
+                _ => unreachable!(),
             };
 
             BaseKind::Living(living, living_kind)
-
         }
-        _ => return Err(NbtParseError::new(format!("{}/id", comp.path()), "valid entity id"))
+        _ => {
+            return Err(NbtParseError::new(
+                format!("{}/id", comp.path()),
+                "valid entity id",
+            ))
+        }
     };
 
     let mut entity = Box::new(Entity(base, base_kind));
     entity.sync(); // Set the initial size/bounding box.
 
     Ok(entity)
-
 }
 
 pub fn to_nbt<'a>(comp: &'a mut NbtCompound, entity: &Entity) -> Option<&'a mut NbtCompound> {
-
     let Entity(base, base_kind) = entity;
 
     match base_kind {
         BaseKind::Item(item) => {
-
             comp.insert("id", "Item");
             comp.insert("Age", base.lifetime);
             comp.insert("Health", item.health.min(i16::MAX as _) as i16);
@@ -217,19 +191,21 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, entity: &Entity) -> Option<&'a mut 
             let mut item_comp = NbtCompound::new();
             item_stack_nbt::to_nbt(&mut item_comp, item.stack);
             comp.insert("Item", item_comp);
-
         }
         BaseKind::Painting(painting) => {
             comp.insert("id", "Painting");
             comp.insert("TileX", painting.block_pos.x);
             comp.insert("TileY", painting.block_pos.y);
             comp.insert("TileZ", painting.block_pos.z);
-            comp.insert("Dir", match painting.face {
-                Face::NegZ => 0i8,
-                Face::NegX => 1,
-                Face::PosZ => 2,
-                _ => 3,
-            });
+            comp.insert(
+                "Dir",
+                match painting.face {
+                    Face::NegZ => 0i8,
+                    Face::NegX => 1,
+                    Face::PosZ => 2,
+                    _ => 3,
+                },
+            );
             comp.insert("Motive", painting_art_nbt::to_nbt(painting.art));
         }
         BaseKind::Boat(_) => {
@@ -244,7 +220,11 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, entity: &Entity) -> Option<&'a mut 
             comp.insert("Type", 1i32);
             comp.insert("Items", slot_nbt::to_nbt_from_inv(&inv[..]));
         }
-        &BaseKind::Minecart(e::Minecart::Furnace { push_x, push_z, fuel }) => {
+        &BaseKind::Minecart(e::Minecart::Furnace {
+            push_x,
+            push_z,
+            fuel,
+        }) => {
             comp.insert("id", "Minecart");
             comp.insert("Type", 2i32);
             comp.insert("fuel", fuel.min(i16::MAX as _) as i16);
@@ -261,7 +241,6 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, entity: &Entity) -> Option<&'a mut 
             comp.insert("Fuse", tnt.fuse_time.min(i8::MAX as _) as i8);
         }
         BaseKind::Projectile(projectile, projectile_kind) => {
-
             match projectile_kind {
                 ProjectileKind::Arrow(arrow) => {
                     comp.insert("id", "Arrow");
@@ -281,10 +260,8 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, entity: &Entity) -> Option<&'a mut 
             comp.insert("inData", block.metadata);
             comp.insert("inGround", projectile.state.is_some());
             comp.insert("shake", projectile.shake.min(i8::MAX as _) as i8);
-
         }
         BaseKind::Living(living, living_kind) => {
-
             match living_kind {
                 LivingKind::Ghast(_) => comp.insert("id", "Ghast"),
                 LivingKind::Slime(slime) => {
@@ -329,7 +306,6 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, entity: &Entity) -> Option<&'a mut 
             comp.insert("HurtTime", living.hurt_time.min(i16::MAX as _) as i16);
             comp.insert("DeathTime", living.death_time.min(i16::MAX as _) as i16);
             comp.insert("AttackTime", living.attack_time.min(i16::MAX as _) as i16);
-
         }
     }
 
@@ -343,5 +319,4 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, entity: &Entity) -> Option<&'a mut 
     comp.insert("OnGround", base.on_ground);
 
     Some(comp)
-
 }

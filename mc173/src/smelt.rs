@@ -4,7 +4,6 @@ use crate::block::material::Material;
 use crate::item::ItemStack;
 use crate::{block, item};
 
-
 /// Find a smelting recipe output from given input item/damage.
 pub fn find_smelting_output(id: u16, damage: u16) -> Option<ItemStack> {
     for recipe in RECIPES {
@@ -34,16 +33,46 @@ pub fn get_burn_ticks(id: u16) -> u16 {
 }
 
 const RECIPES: &[Recipe] = &[
-    Recipe::new(ItemStack::new_block(block::IRON_ORE, 0), ItemStack::new_single(item::IRON_INGOT, 0)),
-    Recipe::new(ItemStack::new_block(block::GOLD_ORE, 0), ItemStack::new_single(item::GOLD_INGOT, 0)),
-    Recipe::new(ItemStack::new_block(block::DIAMOND_ORE, 0), ItemStack::new_single(item::DIAMOND, 0)),
-    Recipe::new(ItemStack::new_block(block::SAND, 0), ItemStack::new_block(block::GLASS, 0)),
-    Recipe::new(ItemStack::new_single(item::RAW_PORKCHOP, 0), ItemStack::new_single(item::COOKED_PORKCHOP, 0)),
-    Recipe::new(ItemStack::new_single(item::RAW_FISH, 0), ItemStack::new_single(item::COOKED_FISH, 0)),
-    Recipe::new(ItemStack::new_block(block::COBBLESTONE, 0), ItemStack::new_block(block::STONE, 0)),
-    Recipe::new(ItemStack::new_single(item::CLAY, 0), ItemStack::new_single(item::BRICK, 0)),
-    Recipe::new(ItemStack::new_block(block::CACTUS, 0), ItemStack::new_single(item::DYE, 2)),
-    Recipe::new(ItemStack::new_block(block::LOG, 0), ItemStack::new_single(item::COAL, 1)),
+    Recipe::new(
+        ItemStack::new_block(block::IRON_ORE, 0),
+        ItemStack::new_single(item::IRON_INGOT, 0),
+    ),
+    Recipe::new(
+        ItemStack::new_block(block::GOLD_ORE, 0),
+        ItemStack::new_single(item::GOLD_INGOT, 0),
+    ),
+    Recipe::new(
+        ItemStack::new_block(block::DIAMOND_ORE, 0),
+        ItemStack::new_single(item::DIAMOND, 0),
+    ),
+    Recipe::new(
+        ItemStack::new_block(block::SAND, 0),
+        ItemStack::new_block(block::GLASS, 0),
+    ),
+    Recipe::new(
+        ItemStack::new_single(item::RAW_PORKCHOP, 0),
+        ItemStack::new_single(item::COOKED_PORKCHOP, 0),
+    ),
+    Recipe::new(
+        ItemStack::new_single(item::RAW_FISH, 0),
+        ItemStack::new_single(item::COOKED_FISH, 0),
+    ),
+    Recipe::new(
+        ItemStack::new_block(block::COBBLESTONE, 0),
+        ItemStack::new_block(block::STONE, 0),
+    ),
+    Recipe::new(
+        ItemStack::new_single(item::CLAY, 0),
+        ItemStack::new_single(item::BRICK, 0),
+    ),
+    Recipe::new(
+        ItemStack::new_block(block::CACTUS, 0),
+        ItemStack::new_single(item::DYE, 2),
+    ),
+    Recipe::new(
+        ItemStack::new_block(block::LOG, 0),
+        ItemStack::new_single(item::COAL, 1),
+    ),
 ];
 
 /// Define a smelting recipe.
@@ -55,9 +84,7 @@ struct Recipe {
 }
 
 impl Recipe {
-
     const fn new(input: ItemStack, output: ItemStack) -> Self {
         Self { input, output }
     }
-
 }

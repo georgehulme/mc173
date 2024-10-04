@@ -5,27 +5,26 @@ use std::ops::Sub;
 
 use glam::{DVec3, IVec3, Vec2, Vec3Swizzles};
 
-use crate::world::bound::RayTraceKind;
-use crate::block::material::Material;
-use crate::geom::{Face, BoundingBox};
-use crate::world::{World, Light};
 use crate::block;
+use crate::block::material::Material;
+use crate::geom::{BoundingBox, Face};
+use crate::world::bound::RayTraceKind;
+use crate::world::{Light, World};
 
-use super::{Entity, LivingKind, Base};
-
+use super::{Base, Entity, LivingKind};
 
 /// Internal macro to make a refutable pattern assignment that just panic if refuted.
 macro_rules! let_expect {
     ( $pat:pat = $expr:expr ) => {
         #[allow(irrefutable_let_patterns)]
-        let $pat = $expr else {
+        let $pat = $expr
+        else {
             unreachable!("invalid argument for this function");
         };
     };
 }
 
-pub(super) use let_expect as let_expect;
-
+pub(super) use let_expect;
 
 // Thread local variables internally used to reduce allocation overhead.
 thread_local! {
@@ -45,7 +44,8 @@ pub fn calc_eye_pos(base: &Base) -> DVec3 {
 /// Return true if the given bounding box is colliding with any fluid (given material).
 pub fn has_fluids_colliding(world: &World, bb: BoundingBox, material: Material) -> bool {
     debug_assert!(material.is_fluid());
-    world.iter_blocks_in_box(bb)
+    world
+        .iter_blocks_in_box(bb)
         .filter(|&(_, block, _)| block::material::get_material(block) == material)
         .any(|(pos, _, metadata)| {
             let dist = block::fluid::get_actual_distance(metadata);
@@ -59,14 +59,12 @@ pub fn has_fluids_colliding(world: &World, bb: BoundingBox, material: Material) 
 /// be a fluid material (water/lava), and the given metadata should be the one of the
 /// current block the the position.
 pub fn calc_fluid_vel(world: &World, pos: IVec3, material: Material, metadata: u8) -> DVec3 {
-
     debug_assert!(material.is_fluid());
 
     let distance = block::fluid::get_actual_distance(metadata);
     let mut vel = DVec3::ZERO;
 
     for face in Face::HORIZONTAL {
-
         let face_delta = face.delta();
         let face_pos = pos + face_delta;
         let (face_block, face_metadata) = world.get_block(face_pos).unwrap_or_default();
@@ -86,13 +84,11 @@ pub fn calc_fluid_vel(world: &World, pos: IVec3, material: Material, metadata: u
                 vel += (face_delta * delta).as_dvec3();
             }
         }
-
     }
 
     // TODO: Things with falling water.
 
     vel.normalize()
-
 }
 
 /// Calculate the light levels for an entity given its base component.
@@ -103,19 +99,23 @@ pub fn get_entity_light(world: &World, base: &Base) -> Light {
 }
 
 /// Find a the closest player entity (as defined in [`World`]) within the given radius.
-pub fn find_closest_player_entity(world: &World, center: DVec3, max_dist: f64) -> Option<(u32, &Entity, f64)> {
+pub fn find_closest_player_entity(
+    world: &World,
+    center: DVec3,
+    max_dist: f64,
+) -> Option<(u32, &Entity, f64)> {
     let max_dist_sq = max_dist.powi(2);
-    world.iter_player_entities()
+    world
+        .iter_player_entities()
         .map(|(entity_id, entity)| (entity_id, entity, entity.0.pos.distance_squared(center)))
         .filter(|&(_, _, dist_sq)| dist_sq <= max_dist_sq)
         .min_by(|(_, _, a), (_, _, b)| a.total_cmp(b))
         .map(|(entity_id, entity, dist_sq)| (entity_id, entity, dist_sq.sqrt()))
 }
 
-/// Modify the look angles of this entity, limited to the given step. 
+/// Modify the look angles of this entity, limited to the given step.
 /// We need to call this function many time to reach the desired look.
 pub fn update_look_by_step(base: &mut Base, look: Vec2, step: Vec2) {
-    
     let look_norm = Vec2 {
         // Yaw can be normalized between 0 and tau
         x: look.x.rem_euclid(std::f32::consts::TAU),
@@ -124,7 +124,6 @@ pub fn update_look_by_step(base: &mut Base, look: Vec2, step: Vec2) {
     };
 
     base.look += look_norm.sub(base.look).min(step);
-
 }
 
 /// Modify the look angles to point to a given target step by step. The eye height is
@@ -144,36 +143,36 @@ pub fn update_look_at_entity_by_step(base: &mut Base, target_base: &Base, step: 
 
 /// Apply knock back to this entity's velocity.
 pub fn update_knock_back(base: &mut Base, dir: DVec3) {
-
     let mut accel = dir.normalize_or_zero();
     accel.y -= 1.0;
 
     base.vel /= 2.0;
     base.vel -= accel * 0.4;
     base.vel.y = base.vel.y.min(0.4);
-
 }
 
 /// Return true if the entity can eye track the target entity, this use ray tracing.
 pub fn can_eye_track(world: &World, base: &Base, target_base: &Base) -> bool {
     let origin = calc_eye_pos(base);
     let ray = calc_eye_pos(target_base) - origin;
-    world.ray_trace_blocks(origin, ray, RayTraceKind::Overlay).is_none()
+    world
+        .ray_trace_blocks(origin, ray, RayTraceKind::Overlay)
+        .is_none()
 }
 
 /// Get the path weight function for the given living entity kind.
 pub fn path_weight_func(living_kind: &LivingKind) -> fn(&World, IVec3) -> f32 {
     match living_kind {
-        LivingKind::Pig(_) |
-        LivingKind::Chicken(_) |
-        LivingKind::Cow(_) |
-        LivingKind::Sheep(_) |
-        LivingKind::Wolf(_) => path_weight_animal,
-        LivingKind::Creeper(_) |
-        LivingKind::PigZombie(_) |
-        LivingKind::Skeleton(_) |
-        LivingKind::Spider(_) |
-        LivingKind::Zombie(_) => path_weight_mob,
+        LivingKind::Pig(_)
+        | LivingKind::Chicken(_)
+        | LivingKind::Cow(_)
+        | LivingKind::Sheep(_)
+        | LivingKind::Wolf(_) => path_weight_animal,
+        LivingKind::Creeper(_)
+        | LivingKind::PigZombie(_)
+        | LivingKind::Skeleton(_)
+        | LivingKind::Spider(_)
+        | LivingKind::Zombie(_) => path_weight_mob,
         LivingKind::Giant(_) => path_weight_giant,
         // We should not match other entities but we never known...
         _ => path_weight_default,

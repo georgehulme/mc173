@@ -1,6 +1,5 @@
 //! Fluid block special functions (mostly for water).
 
-
 /// Return true if this still/moving fluid block acts like a source.
 #[inline]
 pub fn is_source(metadata: u8) -> bool {
@@ -26,7 +25,7 @@ pub fn set_distance(metadata: &mut u8, distance: u8) {
     debug_assert!(distance <= 7);
     *metadata &= !7;
     *metadata |= distance;
-} 
+}
 
 /// Get if this fluid block is falling and therefore should not spread on sides.
 #[inline]
@@ -40,7 +39,7 @@ pub fn set_falling(metadata: &mut u8, falling: bool) {
     *metadata |= (falling as u8) << 3;
 }
 
-/// This function get the actual distance to the source of a fluid block, this account 
+/// This function get the actual distance to the source of a fluid block, this account
 /// both the distance stored in the lower 3 bits, but also for the falling state: if a
 /// fluid is falling, it acts like a source block for propagation.
 #[inline]

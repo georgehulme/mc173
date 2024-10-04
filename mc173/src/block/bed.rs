@@ -2,7 +2,6 @@
 
 use crate::geom::Face;
 
-
 /// Get the facing of a bed.
 #[inline]
 pub fn get_face(metadata: u8) -> Face {
@@ -11,7 +10,7 @@ pub fn get_face(metadata: u8) -> Face {
         1 => Face::NegX,
         2 => Face::NegZ,
         3 => Face::PosX,
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 

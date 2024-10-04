@@ -2,7 +2,6 @@
 
 use crate::geom::Face;
 
-
 /// Get the face where the pumpkin is carved.
 #[inline]
 pub fn get_face(metadata: u8) -> Face {
@@ -11,7 +10,7 @@ pub fn get_face(metadata: u8) -> Face {
         1 => Face::NegX,
         2 => Face::NegZ,
         3 => Face::PosX,
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 
@@ -24,6 +23,6 @@ pub fn set_face(metadata: &mut u8, face: Face) {
         Face::NegX => 1,
         Face::NegZ => 2,
         Face::PosX => 3,
-        _ => 0
+        _ => 0,
     };
 }

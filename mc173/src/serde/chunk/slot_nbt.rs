@@ -1,7 +1,7 @@
 //! Common NBT serde functions for item slots.
 
-use crate::serde::nbt::{NbtParseError, NbtCompoundParse, NbtCompound, NbtListParse, Nbt};
 use crate::item::ItemStack;
+use crate::serde::nbt::{Nbt, NbtCompound, NbtCompoundParse, NbtListParse, NbtParseError};
 
 use super::item_stack_nbt;
 

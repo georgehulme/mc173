@@ -2,8 +2,7 @@
 
 use crate::geom::Face;
 
-
-/// The the face the button is connected to. In b1.7.3, buttons can only attach to X/Z 
+/// The the face the button is connected to. In b1.7.3, buttons can only attach to X/Z
 /// faces, not neg/pos Y.
 #[inline]
 pub fn get_face(metadata: u8) -> Option<Face> {
@@ -12,7 +11,7 @@ pub fn get_face(metadata: u8) -> Option<Face> {
         3 => Face::NegZ,
         4 => Face::PosX,
         5 => Face::NegX,
-        _ => return None
+        _ => return None,
     })
 }
 
@@ -23,6 +22,6 @@ pub fn set_face(metadata: &mut u8, face: Face) {
         Face::NegZ => 3,
         Face::PosX => 4,
         Face::NegX => 5,
-        _ => 0
+        _ => 0,
     }
 }

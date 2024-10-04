@@ -4,15 +4,14 @@ use std::ops::Add;
 
 use glam::DVec3;
 
-use crate::entity::{Hurt, LivingKind, ProjectileKind};
-use crate::world::{World, Event, EntityEvent};
-use crate::block::material::Material;
-use crate::item::{self, ItemStack};
 use crate::block;
+use crate::block::material::Material;
+use crate::entity::{Hurt, LivingKind, ProjectileKind};
+use crate::item::{self, ItemStack};
+use crate::world::{EntityEvent, Event, World};
 
-use super::{Entity, BaseKind, Base, Living};
 use super::common::{self, let_expect};
-
+use super::{Base, BaseKind, Entity, Living};
 
 /// Tick base method that is common to every entity kind, this is split in Notchian impl
 /// so we split it here.
@@ -25,7 +24,6 @@ pub(super) fn tick_state(world: &mut World, id: u32, entity: &mut Entity) {
 
 /// REF: Entity::onEntityUpdate
 fn tick_state_base(world: &mut World, id: u32, entity: &mut Entity) {
-        
     let Entity(base, base_kind) = entity;
 
     // Compute the bounding box used for water collision, it depends on the entity kind.
@@ -58,32 +56,38 @@ fn tick_state_base(world: &mut World, id: u32, entity: &mut Entity) {
     if base.in_water {
         base.fire_time = 0;
         base.fall_distance = 0.0;
-    } else if matches!(base_kind, BaseKind::Living(_, LivingKind::Ghast(_) | LivingKind::PigZombie(_))) {
+    } else if matches!(
+        base_kind,
+        BaseKind::Living(_, LivingKind::Ghast(_) | LivingKind::PigZombie(_))
+    ) {
         base.fire_time = 0;
     }
 
     if base.fire_time > 0 {
         if base.fire_time % 20 == 0 {
-            base.hurt.push(Hurt { damage: 1, origin_id: None });
+            base.hurt.push(Hurt {
+                damage: 1,
+                origin_id: None,
+            });
         }
         base.fire_time -= 1;
     }
 
     // Check if there is a lava block colliding...
     let lava_bb = base.bb.inflate(DVec3::new(-0.1, -0.4, -0.1));
-    base.in_lava = world.iter_blocks_in_box(lava_bb)
+    base.in_lava = world
+        .iter_blocks_in_box(lava_bb)
         .any(|(_, block, _)| block::material::get_material(block) == Material::Lava);
 
     // If this entity can pickup other ones, trigger an event.
     if base.can_pickup {
-
         // Temporarily owned vector to avoid allocation.
         common::ENTITY_ID.with_borrow_mut(|picked_up_entities| {
-
             debug_assert!(picked_up_entities.is_empty());
-            
-            for (entity_id, entity) in world.iter_entities_colliding(base.bb.inflate(DVec3::new(1.0, 0.0, 1.0))) {
 
+            for (entity_id, entity) in
+                world.iter_entities_colliding(base.bb.inflate(DVec3::new(1.0, 0.0, 1.0)))
+            {
                 match &entity.1 {
                     BaseKind::Item(item) => {
                         if item.frozen_time == 0 {
@@ -100,28 +104,24 @@ fn tick_state_base(world: &mut World, id: u32, entity: &mut Entity) {
             }
 
             for entity_id in picked_up_entities.drain(..) {
-                world.push_event(Event::Entity { 
-                    id, 
-                    inner: EntityEvent::Pickup { 
+                world.push_event(Event::Entity {
+                    id,
+                    inner: EntityEvent::Pickup {
                         target_id: entity_id,
                     },
                 });
             }
-
         });
-
     }
-
 }
 
 /// REF: EntityLiving::onEntityUpdate
 fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
-
     // Super call.
     tick_state_base(world, id, entity);
 
     let_expect!(Entity(base, BaseKind::Living(living, living_kind)) = entity);
-    
+
     // Suffocate entities if inside opaque cubes (except for sleeping players).
     let mut check_suffocate = true;
     if let LivingKind::Human(human) = living_kind {
@@ -132,7 +132,6 @@ fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
         let size_x = base.bb.size_x();
         let size_z = base.bb.size_z();
         for i in 0u8..8 {
-            
             let delta = DVec3 {
                 x: ((i & 1) as f64 - 0.5) * size_x * 0.9,
                 y: (((i >> 1) & 1) as f64 - 0.5) * 0.1 + base.eye_height as f64,
@@ -147,12 +146,10 @@ fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
                 });
                 break;
             }
-
         }
     }
 
     // TODO: Air time underwater
-
 
     // If the zombie/skeleton see the sky light, set it on fire.
     if matches!(living_kind, LivingKind::Zombie(_) | LivingKind::Skeleton(_)) {
@@ -160,7 +157,9 @@ fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
         let height = world.get_height(block_pos).unwrap_or(0);
         if block_pos.y >= height {
             let light = common::get_entity_light(world, base);
-            if light.sky_real >= 12 && base.rand.next_float() * 30.0 < (light.brightness() - 0.4) * 2.0 {
+            if light.sky_real >= 12
+                && base.rand.next_float() * 30.0 < (light.brightness() - 0.4) * 2.0
+            {
                 base.fire_time = 300;
             }
         }
@@ -168,7 +167,10 @@ fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
 
     // Lava damage and fire time.
     if base.in_lava {
-        base.hurt.push(Hurt { damage: 4, origin_id: None });
+        base.hurt.push(Hurt {
+            damage: 4,
+            origin_id: None,
+        });
         base.fire_time = 600;
     }
 
@@ -185,7 +187,6 @@ fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
     let mut killer_id = None;
 
     while let Some(hurt) = base.hurt.pop() {
-
         // Don't go further if entity is already dead.
         if living.health == 0 {
             break;
@@ -197,11 +198,13 @@ fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
         // Calculate the actual damage dealt on this tick depending on cooldown.
         let mut actual_damage = 0;
         if living.hurt_time == 0 {
-            
             living.hurt_time = HURT_INITIAL_TIME;
             living.hurt_last_damage = hurt.damage;
             actual_damage = hurt.damage;
-            world.push_event(Event::Entity { id, inner: EntityEvent::Damage });
+            world.push_event(Event::Entity {
+                id,
+                inner: EntityEvent::Damage,
+            });
 
             if let Some(origin_id) = hurt.origin_id {
                 if let Some(Entity(origin_base, _)) = world.get_entity(origin_id) {
@@ -217,7 +220,6 @@ fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
                     common::update_knock_back(base, dir);
                 }
             }
-
         } else if hurt.damage > living.hurt_last_damage {
             actual_damage = hurt.damage - living.hurt_last_damage;
             living.hurt_last_damage = hurt.damage;
@@ -225,65 +227,59 @@ fn tick_state_living(world: &mut World, id: u32, entity: &mut Entity) {
 
         // Apply damage.
         if actual_damage != 0 {
-            
             living.health = living.health.saturating_sub(actual_damage);
-            
+
             // The entity have been killed.
             if living.health == 0 {
                 killer_id = hurt.origin_id;
             }
 
             // TODO: For players, take armor into account.
-
         }
-
     }
 
     if living.health == 0 {
-
         // If this is the first death tick, push event and drop loots.
         if living.death_time == 0 {
-            
-            world.push_event(Event::Entity { id, inner: EntityEvent::Dead });
+            world.push_event(Event::Entity {
+                id,
+                inner: EntityEvent::Dead,
+            });
             spawn_living_loot(world, base, living, living_kind);
 
             // If we know the killer id and we are a creeper, check if this the killer
             // is a skeleton, in which case we drop a music disk.
             if let LivingKind::Creeper(_) = living_kind {
                 if let Some(killer_id) = killer_id {
-                    
-                    if let Some(Entity(_, BaseKind::Living(_, LivingKind::Skeleton(_)))) = world.get_entity(killer_id) {
+                    if let Some(Entity(_, BaseKind::Living(_, LivingKind::Skeleton(_)))) =
+                        world.get_entity(killer_id)
+                    {
                         let item = base.rand.next_choice(&[item::RECORD_13, item::RECORD_CAT]);
                         let stack = ItemStack::new_single(item, 0);
                         world.spawn_loot(base.pos, stack, 0.0);
                     }
-
                 }
             }
-
         }
 
         living.death_time += 1;
         if living.death_time > 20 {
             world.remove_entity(id, "health dead");
         }
-
     }
-    
 }
 
-
-fn spawn_living_loot(world: &mut World, base: &mut Base, _living: &mut Living, living_kind: &mut LivingKind) {
-    
+fn spawn_living_loot(
+    world: &mut World,
+    base: &mut Base,
+    _living: &mut Living,
+    living_kind: &mut LivingKind,
+) {
     let stack = match living_kind {
-        LivingKind::Chicken(_) => 
-            ItemStack::new_single(item::FEATHER, 0),
-        LivingKind::Cow(_) => 
-            ItemStack::new_single(item::LEATHER, 0),
-        LivingKind::Creeper(_) => 
-            ItemStack::new_single(item::GUNPOWDER, 0),
-        LivingKind::Ghast(_) => 
-            ItemStack::new_single(item::GUNPOWDER, 0),
+        LivingKind::Chicken(_) => ItemStack::new_single(item::FEATHER, 0),
+        LivingKind::Cow(_) => ItemStack::new_single(item::LEATHER, 0),
+        LivingKind::Creeper(_) => ItemStack::new_single(item::GUNPOWDER, 0),
+        LivingKind::Ghast(_) => ItemStack::new_single(item::GUNPOWDER, 0),
         LivingKind::Pig(_) => {
             if base.fire_time == 0 {
                 ItemStack::new_single(item::RAW_PORKCHOP, 0)
@@ -291,24 +287,30 @@ fn spawn_living_loot(world: &mut World, base: &mut Base, _living: &mut Living, l
                 ItemStack::new_single(item::COOKED_PORKCHOP, 0)
             }
         }
-        LivingKind::PigZombie(_) => 
-            ItemStack::new_single(item::COOKED_PORKCHOP, 0),
-        LivingKind::Sheep(sheep) if !sheep.sheared => 
-            ItemStack::new_block(block::WOOL, sheep.color),
+        LivingKind::PigZombie(_) => ItemStack::new_single(item::COOKED_PORKCHOP, 0),
+        LivingKind::Sheep(sheep) if !sheep.sheared => {
+            ItemStack::new_block(block::WOOL, sheep.color)
+        }
         LivingKind::Skeleton(_) => {
-            spawn_many_loot(world, base.pos, ItemStack::new_single(item::ARROW, 0), base.rand.next_int_bounded(3) as usize);
-            spawn_many_loot(world, base.pos, ItemStack::new_single(item::BONE, 0), base.rand.next_int_bounded(3) as usize);
+            spawn_many_loot(
+                world,
+                base.pos,
+                ItemStack::new_single(item::ARROW, 0),
+                base.rand.next_int_bounded(3) as usize,
+            );
+            spawn_many_loot(
+                world,
+                base.pos,
+                ItemStack::new_single(item::BONE, 0),
+                base.rand.next_int_bounded(3) as usize,
+            );
             return;
         }
-        LivingKind::Slime(slime) if slime.size == 0 => 
-            ItemStack::new_single(item::SLIMEBALL, 0),
-        LivingKind::Spider(_) => 
-            ItemStack::new_single(item::STRING, 0),
-        LivingKind::Squid(_) => 
-            ItemStack::new_single(item::DYE, 0),
-        LivingKind::Zombie(_) => 
-            ItemStack::new_single(item::FEATHER, 0),
-        _ => return
+        LivingKind::Slime(slime) if slime.size == 0 => ItemStack::new_single(item::SLIMEBALL, 0),
+        LivingKind::Spider(_) => ItemStack::new_single(item::STRING, 0),
+        LivingKind::Squid(_) => ItemStack::new_single(item::DYE, 0),
+        LivingKind::Zombie(_) => ItemStack::new_single(item::FEATHER, 0),
+        _ => return,
     };
 
     let count = match living_kind {
@@ -317,9 +319,7 @@ fn spawn_living_loot(world: &mut World, base: &mut Base, _living: &mut Living, l
     };
 
     spawn_many_loot(world, base.pos, stack, count);
-
 }
-
 
 fn spawn_many_loot(world: &mut World, pos: DVec3, stack: ItemStack, count: usize) {
     for _ in 0..count {

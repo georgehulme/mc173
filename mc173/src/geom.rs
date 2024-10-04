@@ -1,11 +1,10 @@
 //! Various geometry utilities that completes the [`glam`] math crate.
 
-use std::mem::{self, MaybeUninit};
-use std::ops::{Add, AddAssign, Sub, SubAssign, BitOr, BitOrAssign};
 use std::fmt;
+use std::mem::{self, MaybeUninit};
+use std::ops::{Add, AddAssign, BitOr, BitOrAssign, Sub, SubAssign};
 
 use glam::{DVec3, IVec3};
-
 
 /// An axis-aligned bounding box.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -15,11 +14,20 @@ pub struct BoundingBox {
 }
 
 impl BoundingBox {
-
-    pub const CUBE: Self = Self { min: DVec3::ZERO, max: DVec3::ONE };
+    pub const CUBE: Self = Self {
+        min: DVec3::ZERO,
+        max: DVec3::ONE,
+    };
 
     /// Construct a new bounding box from the minimum and maximum points.
-    pub const fn new(min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64) -> Self {
+    pub const fn new(
+        min_x: f64,
+        min_y: f64,
+        min_z: f64,
+        max_x: f64,
+        max_y: f64,
+        max_z: f64,
+    ) -> Self {
         Self {
             min: DVec3::new(min_x, min_y, min_z),
             max: DVec3::new(max_x, max_y, max_z),
@@ -81,7 +89,6 @@ impl BoundingBox {
 
     /// Expand this bounding box by the given delta, only in the delta's direction.
     pub fn expand(mut self, delta: DVec3) -> Self {
-
         if delta.x < 0.0 {
             self.min.x += delta.x;
         } else if delta.x > 0.0 {
@@ -101,14 +108,16 @@ impl BoundingBox {
         }
 
         self
-
     }
 
     /// Return true if this bounding box intersects with the given one.
     pub fn intersects(self, other: Self) -> bool {
-        other.max.x > self.min.x && other.min.x < self.max.x &&
-        other.max.y > self.min.y && other.min.y < self.max.y &&
-        other.max.z > self.min.z && other.min.z < self.max.z
+        other.max.x > self.min.x
+            && other.min.x < self.max.x
+            && other.max.y > self.min.y
+            && other.min.y < self.max.y
+            && other.max.z > self.min.z
+            && other.min.z < self.max.z
     }
 
     /// Return true if this bounding box intersects with the given one on the X axis.
@@ -128,34 +137,47 @@ impl BoundingBox {
 
     /// Return true if this bounding box contains the given point.
     pub fn contains(self, point: DVec3) -> bool {
-        point.x > self.min.x && point.x < self.max.x &&
-        point.y > self.min.y && point.y < self.max.y &&
-        point.z > self.min.z && point.z < self.max.z
+        point.x > self.min.x
+            && point.x < self.max.x
+            && point.y > self.min.y
+            && point.y < self.max.y
+            && point.z > self.min.z
+            && point.z < self.max.z
     }
 
     /// Return true if the point is contained in this bounding box on Y/Z axis only.
     pub fn contains_yz(self, point: DVec3) -> bool {
-        point.y >= self.min.y && point.y <= self.max.y && 
-        point.z >= self.min.z && point.z <= self.max.z
+        point.y >= self.min.y
+            && point.y <= self.max.y
+            && point.z >= self.min.z
+            && point.z <= self.max.z
     }
 
     /// Return true if the point is contained in this bounding box on X/Z axis only.
     pub fn contains_xz(self, point: DVec3) -> bool {
-        point.x >= self.min.x && point.x <= self.max.x && 
-        point.z >= self.min.z && point.z <= self.max.z
+        point.x >= self.min.x
+            && point.x <= self.max.x
+            && point.z >= self.min.z
+            && point.z <= self.max.z
     }
 
     /// Return true if the point is contained in this bounding box on X/Y axis only.
     pub fn contains_xy(self, point: DVec3) -> bool {
-        point.x >= self.min.x && point.x <= self.max.x && 
-        point.y >= self.min.y && point.y <= self.max.y
+        point.x >= self.min.x
+            && point.x <= self.max.x
+            && point.y >= self.min.y
+            && point.y <= self.max.y
     }
 
-    /// Simulate an offset of the given bounding box by the given delta, but with this 
-    /// bounding box potentially colliding with it in the way, this function will return 
+    /// Simulate an offset of the given bounding box by the given delta, but with this
+    /// bounding box potentially colliding with it in the way, this function will return
     /// the new delta that avoid this collision.
     pub fn calc_x_delta(self, other: Self, mut dx: f64) -> f64 {
-        if other.max.y > self.min.y && other.min.y < self.max.y && other.max.z > self.min.z && other.min.z < self.max.z {
+        if other.max.y > self.min.y
+            && other.min.y < self.max.y
+            && other.max.z > self.min.z
+            && other.min.z < self.max.z
+        {
             if dx > 0.0 && other.max.x <= self.min.x {
                 dx = dx.min(self.min.x - other.max.x);
             } else if dx < 0.0 && other.min.x >= self.max.x {
@@ -165,11 +187,15 @@ impl BoundingBox {
         dx
     }
 
-    /// Simulate an offset of the given bounding box by the given delta, but with this 
-    /// bounding box potentially colliding with it in the way, this function will return 
+    /// Simulate an offset of the given bounding box by the given delta, but with this
+    /// bounding box potentially colliding with it in the way, this function will return
     /// the new delta that avoid this collision.
     pub fn calc_y_delta(self, other: Self, mut dy: f64) -> f64 {
-        if other.max.x > self.min.x && other.min.x < self.max.x && other.max.z > self.min.z && other.min.z < self.max.z {
+        if other.max.x > self.min.x
+            && other.min.x < self.max.x
+            && other.max.z > self.min.z
+            && other.min.z < self.max.z
+        {
             if dy > 0.0 && other.max.y <= self.min.y {
                 dy = dy.min(self.min.y - other.max.y);
             } else if dy < 0.0 && other.min.y >= self.max.y {
@@ -179,11 +205,15 @@ impl BoundingBox {
         dy
     }
 
-    /// Simulate an offset of the given bounding box by the given delta, but with this 
-    /// bounding box potentially colliding with it in the way, this function will return 
+    /// Simulate an offset of the given bounding box by the given delta, but with this
+    /// bounding box potentially colliding with it in the way, this function will return
     /// the new delta that avoid this collision.
     pub fn calc_z_delta(self, other: Self, mut dz: f64) -> f64 {
-        if other.max.x > self.min.x && other.min.x < self.max.x && other.max.y > self.min.y && other.min.y < self.max.y {
+        if other.max.x > self.min.x
+            && other.min.x < self.max.x
+            && other.max.y > self.min.y
+            && other.min.y < self.max.y
+        {
             if dz > 0.0 && other.max.z <= self.min.z {
                 dz = dz.min(self.min.z - other.max.z);
             } else if dz < 0.0 && other.min.z >= self.max.z {
@@ -196,59 +226,53 @@ impl BoundingBox {
     /// Compute an intersection of a ray into this bounding box. If this ray intersects
     /// this box, the new vector that hit the first face is returned.
     pub fn calc_ray_trace(self, origin: DVec3, ray: DVec3) -> Option<(DVec3, Face)> {
-
         if ray.x * ray.x >= 1e-7 {
-
-            let (factor, face) =
-            if ray.x > 0.0 { // We can collide only with NegX face.
+            let (factor, face) = if ray.x > 0.0 {
+                // We can collide only with NegX face.
                 ((self.min.x - origin.x) / ray.x, Face::NegX)
-            } else { // We can collide only with PosX face.
+            } else {
+                // We can collide only with PosX face.
                 ((self.max.x - origin.x) / ray.x, Face::PosX)
             };
 
             let point = origin + ray * factor;
             if self.contains_yz(point) {
-                return Some((point - origin, face))
+                return Some((point - origin, face));
             }
-
         }
 
         if ray.y * ray.y >= 1e-7 {
-
-            let (factor, face) =
-            if ray.y > 0.0 { // We can collide only with NegY face.
+            let (factor, face) = if ray.y > 0.0 {
+                // We can collide only with NegY face.
                 ((self.min.y - origin.y) / ray.y, Face::NegY)
-            } else { // We can collide only with PosY face.
+            } else {
+                // We can collide only with PosY face.
                 ((self.max.y - origin.y) / ray.y, Face::PosY)
             };
 
             let point = origin + ray * factor;
             if self.contains_xz(point) {
-                return Some((point - origin, face))
+                return Some((point - origin, face));
             }
-
         }
 
         if ray.z * ray.z >= 1e-7 {
-
-            let (factor, face) =
-            if ray.z > 0.0 { // We can collide only with NegZ face.
+            let (factor, face) = if ray.z > 0.0 {
+                // We can collide only with NegZ face.
                 ((self.min.z - origin.z) / ray.z, Face::NegZ)
-            } else { // We can collide only with PosZ face.
+            } else {
+                // We can collide only with PosZ face.
                 ((self.max.z - origin.z) / ray.z, Face::PosZ)
             };
 
             let point = origin + ray * factor;
             if self.contains_xy(point) {
-                return Some((point - origin, face))
+                return Some((point - origin, face));
             }
-
         }
 
         None
-
     }
-
 }
 
 impl Add<DVec3> for BoundingBox {
@@ -306,7 +330,6 @@ impl fmt::Display for BoundingBox {
     }
 }
 
-
 /// Represent a facing in the world.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -320,9 +343,15 @@ pub enum Face {
 }
 
 impl Face {
-
     /// Array containing all 6 faces.
-    pub const ALL: [Self; 6] = [Self::NegY, Self::PosY, Self::NegZ, Self::PosZ, Self::NegX, Self::PosX];
+    pub const ALL: [Self; 6] = [
+        Self::NegY,
+        Self::PosY,
+        Self::NegZ,
+        Self::PosZ,
+        Self::NegX,
+        Self::PosX,
+    ];
     /// Array containing all 4 horizontal faces.
     pub const HORIZONTAL: [Self; 4] = [Self::NegZ, Self::PosZ, Self::NegX, Self::PosX];
     /// Array containing all X faces.
@@ -340,7 +369,7 @@ impl Face {
             1 => Self::NegX,
             2 => Self::NegZ,
             3 => Self::PosX,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -385,12 +414,9 @@ impl Face {
     #[inline]
     pub fn axis_index(self) -> usize {
         match self {
-            Face::NegY |
-            Face::PosY => 1,
-            Face::NegZ |
-            Face::PosZ => 2,
-            Face::NegX |
-            Face::PosX => 0,
+            Face::NegY | Face::PosY => 1,
+            Face::NegZ | Face::PosZ => 2,
+            Face::NegX | Face::PosX => 0,
         }
     }
 
@@ -415,7 +441,7 @@ impl Face {
             Face::PosX => Face::PosZ,
             Face::PosZ => Face::NegX,
             Face::NegX => Face::NegZ,
-            _ => self
+            _ => self,
         }
     }
 
@@ -427,7 +453,7 @@ impl Face {
             Face::NegX => Face::PosZ,
             Face::PosZ => Face::PosX,
             Face::PosX => Face::NegZ,
-            _ => self
+            _ => self,
         }
     }
 
@@ -459,20 +485,17 @@ impl Face {
             Face::PosX => BoundingBox::new(1.0 - depth, pos, pos, 1.0, neg, neg),
         }
     }
-
 }
-
 
 /// A set of unique faces.
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub struct FaceSet {
-    /// Presence of face are encoded bit by bit, the index of each face is the value of 
+    /// Presence of face are encoded bit by bit, the index of each face is the value of
     /// their enumeration discriminant.
     inner: u8,
 }
 
 impl FaceSet {
-
     /// Create a new empty set.
     #[inline]
     pub const fn new() -> Self {
@@ -530,11 +553,9 @@ impl FaceSet {
         const MASK: u8 = (1 << Face::NegZ as u8) | (1 << Face::PosZ as u8);
         self.inner & MASK != 0
     }
-
 }
 
 impl FromIterator<Face> for FaceSet {
-
     #[inline]
     fn from_iter<T: IntoIterator<Item = Face>>(iter: T) -> Self {
         let mut set = FaceSet::new();
@@ -543,7 +564,6 @@ impl FromIterator<Face> for FaceSet {
         }
         set
     }
-
 }
 
 impl fmt::Debug for FaceSet {
@@ -554,7 +574,6 @@ impl fmt::Debug for FaceSet {
     }
 }
 
-
 /// A map from face to values, it doesn't use heap and is really simple.
 pub struct FaceMap<V> {
     /// Inner set to know which faces are set.
@@ -564,14 +583,13 @@ pub struct FaceMap<V> {
 }
 
 impl<V> FaceMap<V> {
-
     /// Create a new empty set.
     #[inline]
     pub const fn new() -> Self {
-        Self { 
-            set: FaceSet::new(), 
+        Self {
+            set: FaceSet::new(),
             // SAFETY: Our array is made of uninit V, so it's safe to assume it's init.
-            inner: unsafe { MaybeUninit::uninit().assume_init() }
+            inner: unsafe { MaybeUninit::uninit().assume_init() },
         }
     }
 
@@ -600,7 +618,6 @@ impl<V> FaceMap<V> {
 
     #[inline]
     pub fn insert(&mut self, face: Face, val: V) -> Option<V> {
-
         // Replace the previous value (init or not) with an init one.
         let prev_val = mem::replace(&mut self.inner[face as usize], MaybeUninit::new(val));
 
@@ -612,7 +629,6 @@ impl<V> FaceMap<V> {
         } else {
             None
         }
-
     }
 
     #[inline]
@@ -665,7 +681,6 @@ impl<V> FaceMap<V> {
     pub fn contains_z(&self) -> bool {
         self.set.contains_z()
     }
-
 }
 
 impl<V> Default for FaceMap<V> {
@@ -675,16 +690,13 @@ impl<V> Default for FaceMap<V> {
 }
 
 impl<V> Drop for FaceMap<V> {
-
     fn drop(&mut self) {
         // Just clear the map before dropping.
         self.clear();
     }
-
 }
 
 impl<V> FromIterator<(Face, V)> for FaceMap<V> {
-
     #[inline]
     fn from_iter<T: IntoIterator<Item = (Face, V)>>(iter: T) -> Self {
         let mut map = FaceMap::new();
@@ -693,13 +705,16 @@ impl<V> FromIterator<(Face, V)> for FaceMap<V> {
         }
         map
     }
-
 }
 
 impl<V: fmt::Debug> fmt::Debug for FaceMap<V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map()
-            .entries(Face::ALL.into_iter().filter_map(|face| self.get(face).map(|v| (face, v))))
+            .entries(
+                Face::ALL
+                    .into_iter()
+                    .filter_map(|face| self.get(face).map(|v| (face, v))),
+            )
             .finish()
     }
 }

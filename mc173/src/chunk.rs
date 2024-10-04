@@ -1,16 +1,15 @@
-//! A chunk storing block and light data of a world, optimized for runtime performance. 
-//! This  module only provides low-level data structures, refer to the 
+//! A chunk storing block and light data of a world, optimized for runtime performance.
+//! This  module only provides low-level data structures, refer to the
 //! [`world`](crate::world) module for world manipulation methods.
 
+use std::io;
 use std::io::Write;
 use std::sync::Arc;
-use std::io;
 
-use glam::{IVec3, DVec3};
+use glam::{DVec3, IVec3};
 
 use crate::biome::Biome;
 use crate::block;
-
 
 /// Chunk size in both X and Z coordinates.
 pub const CHUNK_WIDTH: usize = 16;
@@ -21,9 +20,8 @@ pub const CHUNK_2D_SIZE: usize = CHUNK_WIDTH * CHUNK_WIDTH;
 /// Internal chunk 3D size, in number of block per chunk.
 pub const CHUNK_3D_SIZE: usize = CHUNK_HEIGHT * CHUNK_2D_SIZE;
 
-
 /// Calculate the index in the chunk's arrays for the given position (local or not). This
-/// is the same layout used by Minecraft's code `_xxx xzzz zyyy yyyy`. Only firsts 
+/// is the same layout used by Minecraft's code `_xxx xzzz zyyy yyyy`. Only firsts
 /// relevant bits are taken in each coordinate component.
 #[inline]
 fn calc_3d_index(pos: IVec3) -> usize {
@@ -54,7 +52,7 @@ pub fn calc_chunk_pos(pos: IVec3) -> Option<(i32, i32)> {
     }
 }
 
-/// Calculate the chunk position corresponding to the given block position. The Y 
+/// Calculate the chunk position corresponding to the given block position. The Y
 /// coordinate is ignored, so it may be invalid.
 #[inline]
 pub fn calc_chunk_pos_unchecked(pos: IVec3) -> (i32, i32) {
@@ -68,8 +66,7 @@ pub fn calc_entity_chunk_pos(pos: DVec3) -> (i32, i32) {
     calc_chunk_pos_unchecked(pos.floor().as_ivec3())
 }
 
-
-/// Data structure storing every chunk-local data, chunks are a world subdivision of 
+/// Data structure storing every chunk-local data, chunks are a world subdivision of
 /// 16x16x128 blocks.
 #[derive(Clone)]
 pub struct Chunk {
@@ -96,15 +93,14 @@ pub struct Chunk {
 }
 
 impl Chunk {
-
     /// Create a new empty chunk, full of air blocks. All block light is zero and all sky
-    /// light is 15. This constructor directly returns an arc chunk to ensure that no 
-    /// useless copy will be done, and also because it make no sense to hold this 
+    /// light is 15. This constructor directly returns an arc chunk to ensure that no
+    /// useless copy will be done, and also because it make no sense to hold this
     /// structure on stack.
-    /// 
-    /// The chunk is specifically returned in a Atomic Reference-Counted container in 
+    ///
+    /// The chunk is specifically returned in a Atomic Reference-Counted container in
     /// order to be used as some kind of Clone-On-Write container (through the method
-    /// [`Arc::make_mut`]), this is especially useful when dealing with zero-copy 
+    /// [`Arc::make_mut`]), this is especially useful when dealing with zero-copy
     /// asynchronous chunk saving.
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
@@ -163,7 +159,7 @@ impl Chunk {
     }
 
     /// Get the height at the given position, the Y component is ignored.
-    /// 
+    ///
     /// The height value corresponds to the Y value of the first block above the column
     /// with full sky light.
     #[inline]
@@ -171,8 +167,8 @@ impl Chunk {
         self.height[calc_2d_index(pos)]
     }
 
-    /// Set the height at the given position, the Y component is ignored. 
-    /// 
+    /// Set the height at the given position, the Y component is ignored.
+    ///
     /// The height value corresponds to the Y value of the first block above the column
     /// with full sky light.
     #[inline]
@@ -209,7 +205,7 @@ impl Chunk {
 
     /// Fill the given chunk area with given block and sky light values.
     /// Panics if Y component of the position is not between 0 and 128 (excluded).
-    pub fn fill_light(&mut self, from: IVec3, size: IVec3, block_light: u8, sky_light: u8)  {
+    pub fn fill_light(&mut self, from: IVec3, size: IVec3, block_light: u8, sky_light: u8) {
         for x in from.x..from.x + size.x {
             for z in from.z..from.z + size.z {
                 for y in from.y..from.y + size.y {
@@ -221,12 +217,11 @@ impl Chunk {
         }
     }
 
-    /// Recompute the height column after the modification of the given block position. 
+    /// Recompute the height column after the modification of the given block position.
     /// The height is recomputed and the skylight is also recomputed.
-    /// 
+    ///
     /// This function also returns a Y position, lower that the given one, that represent
     pub fn recompute_height(&mut self, pos: IVec3) -> u8 {
-
         assert!(pos.y >= 0 && pos.y < CHUNK_HEIGHT as i32);
 
         // Get the previous height, we know that the sky light is 15 at this height.
@@ -262,7 +257,6 @@ impl Chunk {
 
         let mut sky_light = 15u8;
         for y in (0..new_height).rev() {
-
             let pos = IVec3::new(pos.x, y, pos.z);
 
             if sky_light > 0 {
@@ -272,12 +266,10 @@ impl Chunk {
             }
 
             self.set_sky_light(pos, sky_light);
-
         }
 
         self.set_height(pos, new_height as u8);
         new_height as u8
-
     }
 
     /// Recompute the whole height map based on all block in the chunk. This also reset
@@ -295,8 +287,12 @@ impl Chunk {
     /// Write this chunk's data to the given writer, the data is copied from the start
     /// point for the given size. Note that this function may change the start and size
     /// of the area to be more efficient while while writing data.
-    pub fn write_data(&self, mut writer: impl Write, from: &mut IVec3, size: &mut IVec3) -> io::Result<()> {
-
+    pub fn write_data(
+        &self,
+        mut writer: impl Write,
+        from: &mut IVec3,
+        size: &mut IVec3,
+    ) -> io::Result<()> {
         // If the Y component is not properly aligned for copying nibble bytes, adjust it.
         if from.y % 2 != 0 {
             from.y -= 1;
@@ -323,7 +319,6 @@ impl Chunk {
             writer.write_all(&self.block_light.inner)?;
             writer.write_all(&self.sky_light.inner)?;
         } else {
-    
             for x in from.x..to.x {
                 for z in from.z..to.z {
                     // Start index, Y component is first so we can copy the whole column.
@@ -331,34 +326,31 @@ impl Chunk {
                     writer.write_all(&self.block[index..index + height])?;
                 }
             }
-    
+
             for x in from.x..to.x {
                 for z in from.z..to.z {
                     let index = calc_3d_index(IVec3::new(x, from.y, z)) / 2;
                     writer.write_all(&self.metadata.inner[index..index + half_height])?;
                 }
             }
-    
+
             for x in from.x..to.x {
                 for z in from.z..to.z {
                     let index = calc_3d_index(IVec3::new(x, from.y, z)) / 2;
                     writer.write_all(&self.block_light.inner[index..index + half_height])?;
                 }
             }
-    
+
             for x in from.x..to.x {
                 for z in from.z..to.z {
                     let index = calc_3d_index(IVec3::new(x, from.y, z)) / 2;
                     writer.write_all(&self.sky_light.inner[index..index + half_height])?;
                 }
             }
-    
         }
 
         Ok(())
-
     }
-
 }
 
 /// Type alias for a chunk array that stores `u8 * CHUNK_2D_SIZE` values.
@@ -370,15 +362,16 @@ pub type ChunkArray3<T> = [T; CHUNK_3D_SIZE];
 /// Special arrays for chunks that stores `u4 * CHUNK_3D_SIZE` values.
 #[derive(Clone)]
 pub struct ChunkNibbleArray3 {
-    pub inner: [u8; CHUNK_3D_SIZE / 2]
+    pub inner: [u8; CHUNK_3D_SIZE / 2],
 }
 
 impl ChunkNibbleArray3 {
-
     pub const fn new(init: u8) -> Self {
         debug_assert!(init <= 0x0F);
         let init = init << 4 | init;
-        Self { inner: [init; CHUNK_3D_SIZE / 2] }
+        Self {
+            inner: [init; CHUNK_3D_SIZE / 2],
+        }
     }
 
     #[inline]
@@ -401,5 +394,4 @@ impl ChunkNibbleArray3 {
             *slot = (*slot & 0x0F) | (value << 4);
         }
     }
-
 }

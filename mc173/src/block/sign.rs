@@ -2,7 +2,6 @@
 
 use crate::geom::Face;
 
-
 /// Get the face where the stair leads to.
 #[inline]
 pub fn get_wall_face(metadata: u8) -> Option<Face> {
@@ -11,7 +10,7 @@ pub fn get_wall_face(metadata: u8) -> Option<Face> {
         4 => Face::NegX,
         3 => Face::PosZ,
         2 => Face::NegZ,
-        _ => return None
+        _ => return None,
     })
 }
 
@@ -22,7 +21,7 @@ pub fn set_wall_face(metadata: &mut u8, face: Face) {
         Face::NegX => 4,
         Face::PosZ => 3,
         Face::NegZ => 2,
-        _ => panic!("invalid wall face")
+        _ => panic!("invalid wall face"),
     };
 }
 

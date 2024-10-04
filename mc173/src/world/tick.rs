@@ -1,23 +1,21 @@
 //! Block ticking functions.
 
-use glam::{IVec3, DVec3};
+use glam::{DVec3, IVec3};
 
 use tracing::warn;
 
-use crate::entity::{Item, FallingBlock};
 use crate::block::material::Material;
-use crate::block_entity::BlockEntity;
 use crate::block::sapling::TreeKind;
+use crate::block_entity::BlockEntity;
+use crate::entity::{FallingBlock, Item};
 use crate::gen::tree::TreeGenerator;
 use crate::geom::{Face, FaceSet};
 use crate::{block, item};
 
-use super::{World, Dimension, Event, BlockEntityEvent, BlockEntityStorage, LocalWeather};
-
+use super::{BlockEntityEvent, BlockEntityStorage, Dimension, Event, LocalWeather, World};
 
 /// Methods related to block scheduled ticking and random ticking.
 impl World {
-
     /// Tick a block in the world. The random boolean indicates if it's a random tick.
     /// This function is unchecked because the caller should ensure that the given id
     /// and metadata is coherent with the given position.
@@ -34,37 +32,31 @@ impl World {
             block::WATER_MOVING => self.tick_fluid_moving(pos, block::WATER_MOVING, metadata),
             block::LAVA_MOVING => self.tick_fluid_moving(pos, block::LAVA_MOVING, metadata),
             // NOTE: Sugar canes and cactus have the same logic, we just give the block.
-            block::SUGAR_CANES |
-            block::CACTUS => self.tick_cactus_or_sugar_canes(pos, id, metadata),
-            block::CAKE => {}, // Seems unused in MC
+            block::SUGAR_CANES | block::CACTUS => {
+                self.tick_cactus_or_sugar_canes(pos, id, metadata)
+            }
+            block::CAKE => {} // Seems unused in MC
             block::WHEAT => self.tick_wheat(pos, metadata),
-            block::DETECTOR_RAIL => {},
-            block::FARMLAND => {},
+            block::DETECTOR_RAIL => {}
+            block::FARMLAND => {}
             block::FIRE => self.tick_fire(pos, metadata),
             // PARITY: Notchian client check if flowers can stay, we intentionally don't
             // respect that to allow glitched plants to stay.
-            block::DANDELION |
-            block::POPPY |
-            block::DEAD_BUSH |
-            block::TALL_GRASS => {},
+            block::DANDELION | block::POPPY | block::DEAD_BUSH | block::TALL_GRASS => {}
             // Mushrooms ticking
-            block::RED_MUSHROOM |
-            block::BROWN_MUSHROOM => self.tick_mushroom(pos, id),
+            block::RED_MUSHROOM | block::BROWN_MUSHROOM => self.tick_mushroom(pos, id),
             block::SAPLING => self.tick_sapling(pos, metadata),
-            block::SAND |
-            block::GRAVEL if !random => self.tick_falling_block(pos, id),
-            block::GRASS => {}, // Spread
-            block::ICE => {}, // Melt
-            block::LEAVES => {}, // Decay
-            block::WOOD_PRESSURE_PLATE |
-            block::STONE_PRESSURE_PLATE => {}, // Weird, why random tick for redstone?
-            block::PUMPKIN |
-            block::PUMPKIN_LIT => {}, // Seems unused
+            block::SAND | block::GRAVEL if !random => self.tick_falling_block(pos, id),
+            block::GRASS => {}  // Spread
+            block::ICE => {}    // Melt
+            block::LEAVES => {} // Decay
+            block::WOOD_PRESSURE_PLATE | block::STONE_PRESSURE_PLATE => {} // Weird, why random tick for redstone?
+            block::PUMPKIN | block::PUMPKIN_LIT => {}                      // Seems unused
             block::REDSTONE_ORE_LIT => self.tick_redstone_ore_lit(pos),
-            block::SNOW => {}, // Melt
-            block::SNOW_BLOCK => {}, // Melt (didn't know wtf?)
-            block::LAVA_STILL => {}, // Specific to lava still
-            block::TORCH => {}, // Seems not relevant..
+            block::SNOW => {}       // Melt
+            block::SNOW_BLOCK => {} // Melt (didn't know wtf?)
+            block::LAVA_STILL => {} // Specific to lava still
+            block::TORCH => {}      // Seems not relevant..
             _ => {}
         }
     }
@@ -78,7 +70,6 @@ impl World {
     }
 
     fn tick_repeater(&mut self, pos: IVec3, metadata: u8, lit: bool) {
-
         let face = block::repeater::get_face(metadata);
         let delay = block::repeater::get_delay_ticks(metadata);
         let back_powered = self.has_passive_power_from(pos - face.delta(), face);
@@ -91,14 +82,14 @@ impl World {
             }
             self.set_block_notify(pos, block::REPEATER_LIT, metadata);
         }
-
     }
 
     fn tick_redstone_torch(&mut self, pos: IVec3, metadata: u8, lit: bool) {
-
         // TODO: Check torch burnout...
 
-        let Some(torch_face) = block::torch::get_face(metadata) else { return };
+        let Some(torch_face) = block::torch::get_face(metadata) else {
+            return;
+        };
         let powered = self.has_passive_power_from(pos + torch_face.delta(), torch_face.opposite());
 
         if lit {
@@ -108,12 +99,12 @@ impl World {
         } else if !powered {
             self.set_block_notify(pos, block::REDSTONE_TORCH_LIT, metadata);
         }
-
     }
 
     fn tick_dispenser(&mut self, pos: IVec3, metadata: u8) {
-
-        let Some(face) = block::dispenser::get_face(metadata) else { return };
+        let Some(face) = block::dispenser::get_face(metadata) else {
+            return;
+        };
 
         // TODO: Also check for power above? (likely quasi connectivity?)
 
@@ -121,19 +112,20 @@ impl World {
             return;
         }
 
-        let Some(BlockEntity::Dispenser(dispenser)) = self.get_block_entity_mut(pos) else { return };
+        let Some(BlockEntity::Dispenser(dispenser)) = self.get_block_entity_mut(pos) else {
+            return;
+        };
 
         if let Some(index) = dispenser.pick_random_index() {
-
             let mut stack = dispenser.inv[index];
             let dispense_stack = stack.with_size(1);
             stack.size -= 1;
             stack = stack.to_non_empty().unwrap_or_default();
             dispenser.inv[index] = stack;
 
-            self.push_event(Event::BlockEntity { 
-                pos, 
-                inner: BlockEntityEvent::Storage { 
+            self.push_event(Event::BlockEntity {
+                pos,
+                inner: BlockEntityEvent::Storage {
                     storage: BlockEntityStorage::Standard(index as u8),
                     stack,
                 },
@@ -148,38 +140,30 @@ impl World {
             } else if dispense_stack.id == item::SNOWBALL {
                 warn!("TODO: shot snowball from dispenser");
             } else {
-
                 let entity = Item::new_with(|base, item| {
-                    
                     base.persistent = true;
                     base.pos = origin_pos - DVec3::Y * 0.3;
-                    
+
                     let rand_vel = self.rand.next_double() * 0.1 + 0.2;
                     base.vel = face.delta().as_dvec3() * rand_vel;
                     base.vel += self.rand.next_gaussian_vec() * 0.0075 * 6.0;
 
                     item.stack = dispense_stack;
-
                 });
 
                 self.spawn_entity(entity);
 
                 // TODO: Play effect 1000 (click with pitch 1.0)
-
             }
-
         } else {
             // TODO: Play effect 1001 (click with pitch 1.2) in world.
         }
-
     }
 
     /// Tick a cactus.
     fn tick_cactus_or_sugar_canes(&mut self, pos: IVec3, id: u8, metadata: u8) {
-
         // If the block above is air, count how many cactus block are below.
         if self.is_block_air(pos + IVec3::Y) {
-            
             for dy in 1.. {
                 if !self.is_block(pos - IVec3::new(0, dy, 0), id) {
                     break;
@@ -195,14 +179,11 @@ impl World {
             } else {
                 self.set_block_notify(pos, id, metadata + 1);
             }
-
         }
-
     }
 
     /// Tick a wheat crop, grow it if possible.
     fn tick_wheat(&mut self, pos: IVec3, metadata: u8) {
-
         // Do not tick if light level is too low or already fully grown.
         if self.get_light(pos).max_real() < 9 || metadata >= 7 {
             return;
@@ -210,14 +191,12 @@ impl World {
 
         // Growth rate.
         let mut rate = 1.0;
-        
+
         // Check each block below and add to the rate depending on its type.
         for x in pos.x - 1..=pos.x + 1 {
             for z in pos.z - 1..=pos.z + 1 {
-
                 let below_pos = IVec3::new(x, pos.y - 1, z);
                 if let Some((below_id, below_metadata)) = self.get_block(below_pos) {
-                    
                     let mut below_rate = match (below_id, below_metadata) {
                         (block::FARMLAND, 0) => 1.0,
                         (block::FARMLAND, _) => 3.0,
@@ -227,14 +206,12 @@ impl World {
                     if x != pos.x || z != pos.z {
                         below_rate /= 4.0;
                     }
-                    
+
                     rate += below_rate;
-
                 }
-
             }
         }
-        
+
         // Calculate the growth rate, it depends on surrounding wheat crops.
         let mut same_faces = FaceSet::new();
         let mut same_corner = false;
@@ -251,7 +228,7 @@ impl World {
                 break;
             }
         }
-        
+
         if same_corner || (same_faces.contains_x() && same_faces.contains_z()) {
             rate /= 2.0;
         }
@@ -260,24 +237,23 @@ impl World {
         if self.rand.next_int_bounded((100.0 / rate) as i32) == 0 {
             self.set_block_notify(pos, block::WHEAT, metadata + 1);
         }
-
     }
 
     /// Tick a fire and try spreading it.
     fn tick_fire(&mut self, pos: IVec3, metadata: u8) {
-
         // Cache each block id on each face to avoid multiple query to world.
-        let face_id = Face::ALL.map(|face| self.get_block(pos + face.delta()).unwrap_or_default().0);
+        let face_id =
+            Face::ALL.map(|face| self.get_block(pos + face.delta()).unwrap_or_default().0);
         let face_block = |face: Face| face_id[face as usize];
 
         let below_netherrack = face_block(Face::NegY) == block::NETHERRACK;
-        
+
         // Fire can stay only if we are on netherrack, or there is no rain around.
-        let can_stay = 
-            below_netherrack ||
-            Face::HORIZONTAL.into_iter()
+        let can_stay = below_netherrack
+            || Face::HORIZONTAL
+                .into_iter()
                 .all(|face| self.get_local_weather(pos + face.delta()) != LocalWeather::Rain);
-        
+
         if !can_stay {
             self.set_block_notify(pos, block::AIR, 0);
             return;
@@ -293,7 +269,8 @@ impl World {
         self.schedule_block_tick(pos, block::FIRE, 40);
 
         // Check if any block around can catch fire.
-        let catch_fire = Face::ALL.into_iter()
+        let catch_fire = Face::ALL
+            .into_iter()
             .filter(|face| {
                 let (block, _) = self.get_block(pos + face.delta()).unwrap_or_default();
                 block::material::get_fire_flammability(block) > 0
@@ -301,37 +278,38 @@ impl World {
             .collect::<FaceSet>();
 
         if !below_netherrack && catch_fire.is_empty() {
-            // If the fire can't stay, if the block below is not normal or the 
+            // If the fire can't stay, if the block below is not normal or the
             // metadata is high enough.
             if !block::material::is_normal_cube(face_block(Face::NegY)) || metadata > 3 {
                 self.set_block_notify(pos, block::AIR, 0);
             }
-        } else if !below_netherrack 
-                && !catch_fire.contains(Face::NegY) 
-                && metadata == 15 
-                && self.rand.next_int_bounded(4) == 0 {
+        } else if !below_netherrack
+            && !catch_fire.contains(Face::NegY)
+            && metadata == 15
+            && self.rand.next_int_bounded(4) == 0
+        {
             // If the fire is at its maximum metadata and the block below cannot catch
             // fire, it has 1/4 chance of extinguish.
             self.set_block_notify(pos, block::AIR, 0);
         } else {
-
             // For each face, we check if we remove finish burning the block.
             for face in Face::ALL {
-
                 let face_id = face_block(face);
                 let face_burn = block::material::get_fire_burn(face_id);
                 let face_bound = if face.is_y() { 250 } else { 300 };
                 let face_pos = pos + face.delta();
 
                 if self.rand.next_int_bounded(face_bound) < face_burn as i32 {
-                    if self.rand.next_int_bounded(metadata as i32 + 10) < 5 && self.get_local_weather(face_pos) != LocalWeather::Rain {
-                        let new_metadata = (metadata + self.rand.next_int_bounded(5) as u8 / 4).min(15);
+                    if self.rand.next_int_bounded(metadata as i32 + 10) < 5
+                        && self.get_local_weather(face_pos) != LocalWeather::Rain
+                    {
+                        let new_metadata =
+                            (metadata + self.rand.next_int_bounded(5) as u8 / 4).min(15);
                         self.set_block_notify(face_pos, block::FIRE, new_metadata);
                     } else {
                         self.set_block_notify(face_pos, block::AIR, 0);
                     }
                 }
-
             }
 
             // Now try to spread the fire further.
@@ -340,7 +318,6 @@ impl World {
                     for by in pos.y - 1..=pos.y + 4 {
                         let check_pos = IVec3::new(bx, by, bz);
                         if check_pos != pos {
-
                             if !self.is_block_air(check_pos) {
                                 continue;
                             }
@@ -351,51 +328,54 @@ impl World {
                             }
 
                             // Here we get the maximum flammability around...
-                            let flammability = Face::ALL.into_iter()
-                                .map(|face| self.get_block(check_pos + face.delta()).unwrap_or_default())
+                            let flammability = Face::ALL
+                                .into_iter()
+                                .map(|face| {
+                                    self.get_block(check_pos + face.delta()).unwrap_or_default()
+                                })
                                 .map(|(block, _)| block::material::get_fire_flammability(block))
                                 .max()
                                 .unwrap_or(0);
 
                             if flammability != 0 {
                                 let catch = (flammability as i32 + 40) / (metadata as i32 + 30);
-                                if catch > 0 
-                                && self.rand.next_int_bounded(bound) <= catch {
-
-                                    let can_propagate = Face::HORIZONTAL.into_iter()
-                                        .all(|face| self.get_local_weather(check_pos + face.delta()) != LocalWeather::Rain);
+                                if catch > 0 && self.rand.next_int_bounded(bound) <= catch {
+                                    let can_propagate = Face::HORIZONTAL.into_iter().all(|face| {
+                                        self.get_local_weather(check_pos + face.delta())
+                                            != LocalWeather::Rain
+                                    });
 
                                     if can_propagate {
-                                        let new_metadata = (metadata + self.rand.next_int_bounded(5) as u8 / 4).min(15);
+                                        let new_metadata = (metadata
+                                            + self.rand.next_int_bounded(5) as u8 / 4)
+                                            .min(15);
                                         self.set_block_notify(check_pos, block::FIRE, new_metadata);
                                     }
-
                                 }
                             }
-
                         }
                     }
                 }
             }
-
         }
-
     }
 
     /// Tick a mushroom to try spreading it.
     fn tick_mushroom(&mut self, pos: IVec3, id: u8) {
         if self.rand.next_int_bounded(100) == 0 {
+            let spread_pos = pos
+                + IVec3 {
+                    x: self.rand.next_int_bounded(3) - 1,
+                    y: self.rand.next_int_bounded(2) - self.rand.next_int_bounded(2),
+                    z: self.rand.next_int_bounded(3) - 1,
+                };
 
-            let spread_pos = pos + IVec3 {
-                x: self.rand.next_int_bounded(3) - 1,
-                y: self.rand.next_int_bounded(2) - self.rand.next_int_bounded(2),
-                z: self.rand.next_int_bounded(3) - 1,
-            };
-
-            if self.get_light(spread_pos).max() < 13 && self.is_block_air(spread_pos) && self.is_block_opaque_cube(spread_pos - IVec3::Y) {
+            if self.get_light(spread_pos).max() < 13
+                && self.is_block_air(spread_pos)
+                && self.is_block_opaque_cube(spread_pos - IVec3::Y)
+            {
                 self.set_block_notify(spread_pos, id, 0);
             }
-
         }
     }
 
@@ -403,16 +383,16 @@ impl World {
     fn tick_sapling(&mut self, pos: IVec3, mut metadata: u8) {
         if self.get_light(pos + IVec3::Y).max_real() >= 9 && self.rand.next_int_bounded(30) == 0 {
             if block::sapling::is_growing(metadata) {
-                
                 let mut gen = match block::sapling::get_kind(metadata) {
-                    TreeKind::Oak if self.rand.next_int_bounded(10) == 0 => TreeGenerator::new_big(),
+                    TreeKind::Oak if self.rand.next_int_bounded(10) == 0 => {
+                        TreeGenerator::new_big()
+                    }
                     TreeKind::Oak => TreeGenerator::new_oak(),
                     TreeKind::Birch => TreeGenerator::new_birch(),
                     TreeKind::Spruce => TreeGenerator::new_spruce2(),
                 };
 
                 gen.generate_from_sapling(self, pos);
-
             } else {
                 block::sapling::set_growing(&mut metadata, true);
                 self.set_block_notify(pos, block::SAPLING, metadata);
@@ -422,8 +402,8 @@ impl World {
 
     fn tick_falling_block(&mut self, pos: IVec3, id: u8) {
         let (below_block, _) = self.get_block(pos - IVec3::Y).unwrap_or_default();
-        if below_block == 0 || below_block == block::FIRE || block::material::is_fluid(below_block) {
-
+        if below_block == 0 || below_block == block::FIRE || block::material::is_fluid(below_block)
+        {
             self.spawn_entity(FallingBlock::new_with(|base, falling_block| {
                 base.persistent = true;
                 base.pos = pos.as_dvec3() + 0.5;
@@ -431,7 +411,6 @@ impl World {
             }));
 
             self.set_block_notify(pos, block::AIR, 0);
-            
         }
     }
 
@@ -441,7 +420,6 @@ impl World {
 
     /// Tick a moving fluid block.
     fn tick_fluid_moving(&mut self, pos: IVec3, flowing_id: u8, mut metadata: u8) {
-
         // +1 to get still fluid id.
         let still_id = flowing_id + 1;
         let material = block::material::get_material(flowing_id);
@@ -458,7 +436,6 @@ impl World {
 
         // Update this fluid state.
         if !block::fluid::is_source(metadata) {
-
             // Default to 8, so if no fluid block is found around, fluid will disappear.
             let mut shortest_dist = 8;
             let mut sources_around = 0u8;
@@ -493,7 +470,12 @@ impl World {
             }
 
             // Infinite water sources!
-            if sources_around >= 2 && flowing_id == block::WATER_MOVING && ((block::material::get_material(below_id).is_solid()) || ((below_id == flowing_id || below_id == still_id) && block::fluid::is_source(below_metadata))) {
+            if sources_around >= 2
+                && flowing_id == block::WATER_MOVING
+                && ((block::material::get_material(below_id).is_solid())
+                    || ((below_id == flowing_id || below_id == still_id)
+                        && block::fluid::is_source(below_metadata)))
+            {
                 block::fluid::set_source(&mut new_metadata);
             }
 
@@ -510,7 +492,6 @@ impl World {
                 // Metadata is the same, set still.
                 self.set_block(pos, still_id, metadata);
             }
-
         } else {
             // Moving source is systematically set to still source.
             self.set_block(pos, still_id, metadata);
@@ -525,12 +506,11 @@ impl World {
         let blocked_below = block::material::is_fluid_proof(below_id);
 
         if !block::material::is_fluid(below_id) && !blocked_below {
-            // The block below is not a fluid block and do not block fluids, the fluid 
+            // The block below is not a fluid block and do not block fluids, the fluid
             // below is set to a falling version of the current block.
             block::fluid::set_falling(&mut metadata, true);
             self.set_block_notify(below_pos, flowing_id, metadata);
         } else if block::fluid::is_source(metadata) || blocked_below {
-
             // The block is a source or is blocked below, we spread it horizontally.
             let flow_faces = self.calc_fluid_flow_faces(pos, material);
 
@@ -544,7 +524,9 @@ impl World {
                 if flow_faces.contains(face) {
                     let face_pos = pos + face.delta();
                     if let Some((face_id, _)) = self.get_block(face_pos) {
-                        if !block::material::is_fluid(face_id) && !block::material::is_fluid_proof(face_id) {
+                        if !block::material::is_fluid(face_id)
+                            && !block::material::is_fluid_proof(face_id)
+                        {
                             // TODO: Break only for water.
                             self.break_block(face_pos);
                             self.set_block_notify(face_pos, flowing_id, new_dist);
@@ -552,26 +534,24 @@ impl World {
                     }
                 }
             }
-
         }
-
     }
 
     fn calc_fluid_flow_faces(&mut self, pos: IVec3, material: Material) -> FaceSet {
-
         let mut lowest_cost = u8::MAX;
         let mut set = FaceSet::new();
 
         for face in Face::HORIZONTAL {
-
             let face_pos = pos + face.delta();
             let (face_block, face_metadata) = self.get_block(face_pos).unwrap_or_default();
 
-            if !block::material::is_fluid_proof(face_block) && (block::material::get_material(face_block) != material || !block::fluid::is_source(face_metadata)) {
-
+            if !block::material::is_fluid_proof(face_block)
+                && (block::material::get_material(face_block) != material
+                    || !block::fluid::is_source(face_metadata))
+            {
                 let face_below_pos = face_pos - IVec3::Y;
                 let (face_below_block, _) = self.get_block(face_below_pos).unwrap_or_default();
-                
+
                 let face_cost = if !block::material::is_fluid_proof(face_below_block) {
                     0
                 } else {
@@ -585,35 +565,38 @@ impl World {
                     lowest_cost = face_cost;
                 }
 
-                // If our face has the lowest cost, we insert it. 
+                // If our face has the lowest cost, we insert it.
                 if face_cost == lowest_cost {
                     set.insert(face);
                 }
-
             }
-
         }
 
         set
-
     }
 
     /// Internal function to calculate the flow cost of a fluid toward the given face. If
-    /// the face is not given, all faces are checked, and the recursive calls have the 
+    /// the face is not given, all faces are checked, and the recursive calls have the
     /// face set to all four horizontal faces.
-    fn calc_fluid_flow_cost(&mut self, pos: IVec3, material: Material, origin_face: Face, cost: u8) -> u8 {
-        
+    fn calc_fluid_flow_cost(
+        &mut self,
+        pos: IVec3,
+        material: Material,
+        origin_face: Face,
+        cost: u8,
+    ) -> u8 {
         let mut lowest_cost = u8::MAX;
 
         for face in Face::HORIZONTAL {
             // Do not check the face from where the check come.
             if face != origin_face.opposite() {
-
                 let face_pos = pos + face.delta();
                 let (face_block, face_metadata) = self.get_block(face_pos).unwrap_or_default();
 
-                if !block::material::is_fluid_proof(face_block) && (block::material::get_material(face_block) != material || !block::fluid::is_source(face_metadata)) {
-
+                if !block::material::is_fluid_proof(face_block)
+                    && (block::material::get_material(face_block) != material
+                        || !block::fluid::is_source(face_metadata))
+                {
                     let face_below_pos = face_pos - IVec3::Y;
                     let (face_below_block, _) = self.get_block(face_below_pos).unwrap_or_default();
                     if !block::material::is_fluid_proof(face_below_block) {
@@ -621,16 +604,17 @@ impl World {
                     }
 
                     if cost < 4 {
-                        lowest_cost = lowest_cost.min(self.calc_fluid_flow_cost(face_pos, material, origin_face, cost + 1));
+                        lowest_cost = lowest_cost.min(self.calc_fluid_flow_cost(
+                            face_pos,
+                            material,
+                            origin_face,
+                            cost + 1,
+                        ));
                     }
-
                 }
-
             }
         }
 
         lowest_cost
-
     }
-
 }

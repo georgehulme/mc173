@@ -1,14 +1,12 @@
 //! Sapling block metadata functions.
 
-
 /// Kind of tree for sapling, logs and leaves.
-#[derive(Debug, )]
+#[derive(Debug)]
 pub enum TreeKind {
     Oak,
     Birch,
     Spruce,
 }
-
 
 /// Get the kind of tree for this sapling.
 #[inline]
@@ -17,7 +15,7 @@ pub fn get_kind(metadata: u8) -> TreeKind {
         0 | 3 => TreeKind::Oak,
         1 => TreeKind::Spruce,
         2 => TreeKind::Birch,
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 
@@ -26,8 +24,7 @@ pub fn get_kind(metadata: u8) -> TreeKind {
 pub fn set_kind(metadata: &mut u8, kind: TreeKind) {
     *metadata &= !3;
     *metadata |= match kind {
-        TreeKind::Oak |
-        TreeKind::Spruce => 1,
+        TreeKind::Oak | TreeKind::Spruce => 1,
         TreeKind::Birch => 2,
     };
 }

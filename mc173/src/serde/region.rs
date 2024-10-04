@@ -1,11 +1,11 @@
 //! Minecraft region file format storing 32x32 chunks inside a single file.
 
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
-use std::io::{self, Seek, SeekFrom, Write, Read};
-use std::path::{Path, PathBuf};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Take;
+use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::path::{Path, PathBuf};
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
@@ -15,8 +15,7 @@ use flate2::Compression;
 
 use crate::io::{ReadJavaExt, WriteJavaExt};
 
-
-/// Internal function to calculate the index of a chunk metadata depending on its 
+/// Internal function to calculate the index of a chunk metadata depending on its
 /// position, this is the same calculation as Notchian server.
 #[inline]
 fn calc_chunk_meta_index(cx: i32, cz: i32) -> usize {
@@ -35,7 +34,6 @@ pub struct RegionDir {
 }
 
 impl RegionDir {
-    
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {
             path: path.into(),
@@ -46,24 +44,29 @@ impl RegionDir {
     /// Ensure that a region file exists for the given chunk coordinates. If false is
     /// given as the 'create' argument, then the file will not be created and initialized
     /// if not existing.
-    pub fn ensure_region(&mut self, cx: i32, cz: i32, create: bool) -> Result<&mut Region<File>, RegionError> {
+    pub fn ensure_region(
+        &mut self,
+        cx: i32,
+        cz: i32,
+        create: bool,
+    ) -> Result<&mut Region<File>, RegionError> {
         let (rx, rz) = (cx >> 5, cz >> 5);
         match self.cache.entry((rx, rz)) {
             Entry::Occupied(o) => Ok(o.into_mut()),
-            Entry::Vacant(v) => {
-                Ok(v.insert(Region::open(self.path.join(format!("r.{rx}.{rz}.mcr")), create)?))
-            }
+            Entry::Vacant(v) => Ok(v.insert(Region::open(
+                self.path.join(format!("r.{rx}.{rz}.mcr")),
+                create,
+            )?)),
         }
     }
-
 }
 
 /// A handle to a region file. This is an implementation of ".mcr" region files following
 /// the same algorithms as the Notchian server, first developed by Scaevolus (legend!).
-/// 
+///
 /// Being generic over `I` allows us to use a mockup inner for tests.
 pub struct Region<I> {
-    /// Underlying read/writer with seek. 
+    /// Underlying read/writer with seek.
     inner: I,
     /// Stores the metadata of each chunks
     chunks: Box<[ChunkMeta; 1024]>,
@@ -72,12 +75,10 @@ pub struct Region<I> {
 }
 
 impl Region<File> {
-
     /// Open a region file, this constructor report every possible error with the region
     /// file without altering it in such case, it's up to the caller to delete the file
     /// and retry is wanted.
     pub fn open<P: AsRef<Path>>(path: P, create: bool) -> Result<Self, RegionError> {
-
         let path: &Path = path.as_ref();
 
         if create {
@@ -93,20 +94,16 @@ impl Region<File> {
             .open(path)?;
 
         Self::new(file, create)
-        
     }
-
 }
 
 impl<I> Region<I>
 where
     I: Read + Write + Seek,
 {
-
     /// Create a new region around a inner reader/writer with seek. This constructor
     /// also reads initial data and also check for file integrity.
     pub fn new(mut inner: I, create: bool) -> Result<Self, RegionError> {
-
         // Start by querying the file length.
         let mut file_len = inner.seek(SeekFrom::End(0))?;
 
@@ -135,7 +132,6 @@ where
 
         // Start by reading each offset, 4 bytes each for 1024 chunks, so 4K.
         for i in 0..1024 {
-
             let range_raw = inner.read_java_int()? as u32;
             let range = SectorRange {
                 offset: range_raw >> 8,
@@ -151,7 +147,6 @@ where
                     return Err(RegionError::IllegalRange);
                 }
             }
-
         }
 
         // Then we read the timestamps, same format as offsets.
@@ -164,7 +159,6 @@ where
             chunks,
             sectors,
         })
-
     }
 
     /// Internal function to get the chunk metadata associated with a chunk.
@@ -172,7 +166,7 @@ where
         self.chunks[calc_chunk_meta_index(cx, cz)]
     }
 
-    /// Internal function to set the chunk metadata and synchronize 
+    /// Internal function to set the chunk metadata and synchronize
     fn set_chunk_meta_and_sync(&mut self, cx: i32, cz: i32, chunk: ChunkMeta) -> io::Result<()> {
         let index = calc_chunk_meta_index(cx, cz);
         // Synchronize range.
@@ -193,7 +187,6 @@ where
     /// Read the chunk at the given position, the chunk position is at modulo 32 in order
     /// to respect the limitations of the region size, caller don't have to do it.
     pub fn read_chunk(&mut self, cx: i32, cz: i32) -> Result<ChunkReader<'_, I>, RegionError> {
-
         let chunk = self.get_chunk_meta(cx, cz);
         if chunk.is_empty() {
             return Err(RegionError::EmptyChunk);
@@ -204,7 +197,8 @@ where
         }
 
         // Seek to the start of the chunk where the header is present.
-        self.inner.seek(SeekFrom::Start(chunk.range.offset as u64 * 4096))?;
+        self.inner
+            .seek(SeekFrom::Start(chunk.range.offset as u64 * 4096))?;
 
         let chunk_size = self.inner.read_java_int()?;
         if chunk_size <= 0 || chunk_size as u32 + 4 > chunk.range.count * 4096 {
@@ -224,22 +218,26 @@ where
         };
 
         Ok(ChunkReader { inner })
-
     }
 
     /// Write a chunk at the given position, the chunk position is at modulo 32 in order
     /// to respect the limitations of the region size, caller don't have to do it.
     pub fn write_chunk(&mut self, cx: i32, cz: i32) -> ChunkWriter<'_, I> {
         ChunkWriter {
-            cx, 
-            cz, 
-            encoder: ZlibEncoder::new(Vec::new(), Compression::best()), 
+            cx,
+            cz,
+            encoder: ZlibEncoder::new(Vec::new(), Compression::best()),
             region: self,
         }
     }
 
-    fn write_chunk_data(&mut self, cx: i32, cz: i32, compression_id: u8, data: &[u8]) -> Result<(), RegionError> {
- 
+    fn write_chunk_data(
+        &mut self,
+        cx: i32,
+        cz: i32,
+        compression_id: u8,
+        data: &[u8],
+    ) -> Result<(), RegionError> {
         // NOTE: This will always require at least 1 sector because of headers.
         let sector_count = (data.len() + 5 - 1) as u32 / 4096 + 1;
         if sector_count > 0xFF {
@@ -250,7 +248,10 @@ where
 
         // This assert is critical to ensure that no data corruption happens if we made
         // any programming mistakes.
-        assert!(chunk.range.count == 0 || chunk.range.offset >= 2, "previous chunk metadata uses reserved sectors");
+        assert!(
+            chunk.range.count == 0 || chunk.range.offset >= 2,
+            "previous chunk metadata uses reserved sectors"
+        );
         // Just a sanity check.
         debug_assert!(sector_count != 0);
 
@@ -258,7 +259,6 @@ where
         // allocate a new available range. This can also happen if the old chunk metadata
         // was zero in length.
         if sector_count != chunk.range.count {
-
             let mut clear_range = chunk.range;
 
             // We just need to shrink sectors. If count was zero then nothing is cleared
@@ -271,7 +271,8 @@ where
 
             // Clear the previous range.
             if clear_range.count != 0 {
-                self.inner.seek(SeekFrom::Start(clear_range.offset as u64 * 4096))?;
+                self.inner
+                    .seek(SeekFrom::Start(clear_range.offset as u64 * 4096))?;
                 for offset in clear_range.offset..clear_range.offset + clear_range.count {
                     let slot = &mut self.sectors[offset as usize / 64];
                     *slot &= !(1u64 << (offset % 64));
@@ -281,15 +282,14 @@ where
 
             // If we did not shrink, we have deallocated everything so we need to alloc.
             if sector_count > chunk.range.count {
-
                 // Debug assert to ensure that our internal sectors always keep first two
-                // sectors as reserved, this is just a _debug_ assert because we later 
+                // sectors as reserved, this is just a _debug_ assert because we later
                 // ensures that no data is written in these sectors.
                 debug_assert_eq!(self.sectors[0] & 0b11, 0b11);
 
                 let mut new_range = SectorRange::default();
 
-                // NOTE: Our sectors should always be filled 
+                // NOTE: Our sectors should always be filled
                 'out: for (slot_index, mut slot) in self.sectors.iter().copied().enumerate() {
                     // Avoid check a slot that is fully allocated.
                     if slot != u64::MAX {
@@ -330,9 +330,7 @@ where
                 }
 
                 chunk.range = new_range;
-
             }
-
         }
 
         // This assert is critical if we failed our implementation to avoid corruption.
@@ -342,7 +340,8 @@ where
 
         // Write the metadata and then write the chunk data.
         self.set_chunk_meta_and_sync(cx, cz, chunk)?;
-        self.inner.seek(SeekFrom::Start(chunk.range.offset as u64 * 4096))?;
+        self.inner
+            .seek(SeekFrom::Start(chunk.range.offset as u64 * 4096))?;
         self.inner.write_java_int(data.len() as i32 + 1)?; // Counting the compression id.
         self.inner.write_u8(compression_id)?;
         self.inner.write_all(data)?;
@@ -355,11 +354,8 @@ where
         self.inner.flush()?;
 
         Ok(())
-
     }
-
 }
-
 
 /// A handle for reading a chunk from a region file.
 pub struct ChunkReader<'region, I> {
@@ -377,7 +373,6 @@ impl<I> Read for ChunkReader<'_, I>
 where
     I: Read + Write + Seek,
 {
-
     #[inline]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match &mut self.inner {
@@ -393,9 +388,7 @@ where
             ChunkReaderInner::Zlib(zlib) => zlib.read_exact(buf),
         }
     }
-
 }
-
 
 /// A handle for writing a chunk in a region file.
 pub struct ChunkWriter<'region, I> {
@@ -409,11 +402,10 @@ pub struct ChunkWriter<'region, I> {
     region: &'region mut Region<I>,
 }
 
-impl<I> ChunkWriter<'_, I> 
+impl<I> ChunkWriter<'_, I>
 where
     I: Read + Write + Seek,
 {
-
     /// A more costly variant of the regular IO's flush function, because this one also
     /// flush the inner encoded buffer to the region file, therefore searching available
     /// sectors and writing data.
@@ -421,11 +413,9 @@ where
         let inner = self.encoder.flush_finish()?;
         self.region.write_chunk_data(self.cx, self.cz, 2, &inner)
     }
-
 }
 
 impl<I> Write for ChunkWriter<'_, I> {
-
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.encoder.write(buf)
@@ -436,15 +426,13 @@ impl<I> Write for ChunkWriter<'_, I> {
         // We are not flushing here because it's only relevant to flush in `flush_chunk`.
         Ok(())
     }
-
 }
-
 
 /// Internal cached chunk metadata, it is kept in-sync with the region file.
 #[derive(Debug, Clone, Copy)]
 struct ChunkMeta {
     /// The offset of the chunk in sectors within the region file. The least significant
-    /// byte is used for counting the number of sectors used (can be zero), and the 
+    /// byte is used for counting the number of sectors used (can be zero), and the
     /// remaining 3 bytes are storing the offset in sectors (should not be 0 or 1).
     range: SectorRange,
     /// Timestamp when the chunk was last saved in the region file.
@@ -452,13 +440,17 @@ struct ChunkMeta {
 }
 
 impl ChunkMeta {
-
-    const INIT: Self = Self { range: SectorRange { offset: 0, count: 0 }, timestamp: 0 };
+    const INIT: Self = Self {
+        range: SectorRange {
+            offset: 0,
+            count: 0,
+        },
+        timestamp: 0,
+    };
 
     fn is_empty(self) -> bool {
         self.range.is_empty()
     }
-
 }
 
 /// Indicate a free range of sector.
@@ -471,11 +463,9 @@ struct SectorRange {
 }
 
 impl SectorRange {
-
     fn is_empty(self) -> bool {
         self.count == 0
     }
-
 }
 
 /// Error type used together with `RegionResult` for every call on region file methods.

@@ -3,10 +3,8 @@
 use byteorder::{ReadBytesExt, WriteBytesExt, BE};
 use std::io::{self, Read, Write};
 
-
 /// Extension trait with Minecraft-specific packet read methods.
 pub trait ReadJavaExt: Read {
-
     #[inline]
     fn read_java_byte(&mut self) -> io::Result<i8> {
         ReadBytesExt::read_i8(self)
@@ -43,7 +41,6 @@ pub trait ReadJavaExt: Read {
     }
 
     fn read_java_string16(&mut self, max_len: usize) -> io::Result<String> {
-        
         let len = self.read_java_short()?;
         if len < 0 {
             return Err(new_invalid_data_err("negative length string"));
@@ -63,24 +60,19 @@ pub trait ReadJavaExt: Read {
             .collect::<String>();
 
         Ok(ret)
-
     }
 
     fn read_java_string8(&mut self) -> io::Result<String> {
-
         let len = self.read_u16::<BE>()?;
         let mut buf = vec![0u8; len as usize];
         self.read_exact(&mut buf)?;
 
         String::from_utf8(buf).map_err(|_| new_invalid_data_err("invalid utf-8 string"))
-
     }
-
 }
 
 /// Extension trait with Minecraft-specific packet write methods.
 pub trait WriteJavaExt: Write {
-
     #[inline]
     fn write_java_byte(&mut self, b: i8) -> io::Result<()> {
         WriteBytesExt::write_i8(self, b)
@@ -117,38 +109,32 @@ pub trait WriteJavaExt: Write {
     }
 
     fn write_java_string16(&mut self, s: &str) -> io::Result<()> {
-        
         // Count the number of UTF-16 java character.
         let len = s.chars().map(|c| c.len_utf16()).sum::<usize>();
         if len > i16::MAX as usize {
             return Err(new_invalid_data_err("string too big"));
         }
-        
+
         self.write_java_short(len as i16)?;
         for code in s.encode_utf16() {
             WriteBytesExt::write_u16::<BE>(self, code)?;
         }
 
         Ok(())
-
     }
 
     fn write_java_string8(&mut self, s: &str) -> io::Result<()> {
-
         if s.len() > u16::MAX as usize {
             return Err(new_invalid_data_err("string too big"));
         }
 
         self.write_u16::<BE>(s.len() as u16)?;
         self.write_all(s.as_bytes())
-        
     }
-
 }
 
 impl<R: Read> ReadJavaExt for R {}
 impl<W: Write> WriteJavaExt for W {}
-
 
 /// Return an invalid data io error with specific message.
 fn new_invalid_data_err(message: &'static str) -> io::Error {

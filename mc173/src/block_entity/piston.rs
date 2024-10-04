@@ -3,9 +3,8 @@
 use glam::IVec3;
 
 use crate::block;
-use crate::world::World;
 use crate::geom::Face;
-
+use crate::world::World;
 
 #[derive(Debug, Clone)]
 pub struct PistonBlockEntity {
@@ -23,9 +22,9 @@ pub struct PistonBlockEntity {
 
 impl Default for PistonBlockEntity {
     fn default() -> Self {
-        Self { 
-            block: 0, 
-            metadata: 0, 
+        Self {
+            block: 0,
+            metadata: 0,
             face: Face::PosY,
             progress: 0.0,
             extending: false,
@@ -34,9 +33,7 @@ impl Default for PistonBlockEntity {
 }
 
 impl PistonBlockEntity {
-
     pub fn tick(&mut self, world: &mut World, pos: IVec3) {
-
         if self.progress >= 1.0 {
             // TODO: Handle entity push
             world.remove_block_entity(pos);
@@ -49,7 +46,5 @@ impl PistonBlockEntity {
                 // TODO: Handle entity push
             }
         }
-
     }
-
 }

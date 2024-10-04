@@ -1,8 +1,7 @@
 //! Dispenser block entity.
 
-use crate::rand::JavaRandom;
 use crate::item::ItemStack;
-
+use crate::rand::JavaRandom;
 
 #[derive(Debug, Clone, Default)]
 pub struct DispenserBlockEntity {
@@ -13,11 +12,9 @@ pub struct DispenserBlockEntity {
 }
 
 impl DispenserBlockEntity {
-
     /// Randomly pick a non-empty stack in this dispenser, returning its index if any,
-    /// none if there are only empty stacks in the inventory. 
+    /// none if there are only empty stacks in the inventory.
     pub fn pick_random_index(&mut self) -> Option<usize> {
-
         let mut bound = 0;
         let mut selected_index = None;
 
@@ -31,7 +28,5 @@ impl DispenserBlockEntity {
         }
 
         selected_index
-
     }
-    
 }

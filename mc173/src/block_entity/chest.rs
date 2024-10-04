@@ -2,7 +2,6 @@
 
 use crate::item::ItemStack;
 
-
 #[derive(Debug, Clone, Default)]
 pub struct ChestBlockEntity {
     /// The inventory of the chest.

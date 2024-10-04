@@ -1,7 +1,7 @@
 //! NBT serialization and deserialization for [`ItemStack`] type.
 
-use crate::serde::nbt::{NbtParseError, NbtCompound, NbtCompoundParse};
 use crate::item::ItemStack;
+use crate::serde::nbt::{NbtCompound, NbtCompoundParse, NbtParseError};
 
 /// Create an item stack from a NBT compound.
 pub fn from_nbt(comp: NbtCompoundParse) -> Result<ItemStack, NbtParseError> {

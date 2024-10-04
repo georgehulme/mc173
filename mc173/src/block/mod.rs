@@ -6,22 +6,21 @@ use crate::item::Item;
 pub mod material;
 
 // Block specific functions for their metadata.
-pub mod dispenser;
-pub mod trapdoor;
-pub mod repeater;
-pub mod pumpkin;
-pub mod sapling;
+pub mod bed;
 pub mod button;
+pub mod dispenser;
+pub mod door;
+pub mod fluid;
 pub mod ladder;
-pub mod piston;
 pub mod lever;
+pub mod piston;
+pub mod pumpkin;
+pub mod repeater;
+pub mod sapling;
+pub mod sign;
 pub mod stair;
 pub mod torch;
-pub mod fluid;
-pub mod door;
-pub mod sign;
-pub mod bed;
-
+pub mod trapdoor;
 
 /// Internal macro to easily define blocks registry.
 macro_rules! blocks {
@@ -162,7 +161,7 @@ pub fn from_name(name: &str) -> Option<u8> {
     NAMES.iter().position(|&n| n == name).map(|n| n as u8)
 }
 
-/// Find the item associated to the given block id. 
+/// Find the item associated to the given block id.
 /// TODO: This should be removed in the future when items module is reworked.
 #[inline]
 pub fn item(id: u8) -> &'static Item {

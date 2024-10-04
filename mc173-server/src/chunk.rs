@@ -1,25 +1,24 @@
 //! Chunk tracking.
 
 use std::collections::{HashMap, VecDeque};
-use std::time::{Instant, Duration};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use glam::IVec3;
 
-use mc173::chunk::{Chunk, self};
+use mc173::chunk::{self, Chunk};
 use mc173::world::World;
 
-use crate::proto::{OutPacket, self};
 use crate::player::ServerPlayer;
+use crate::proto::{self, OutPacket};
 
-
-/// This data structure contains all chunk trackers for a world. It can be used to 
+/// This data structure contains all chunk trackers for a world. It can be used to
 /// efficiently send block changes to clients.
 #[derive(Debug)]
 pub struct ChunkTrackers {
     /// Inner mapping from chunk coordinates to tracker.
     inner: HashMap<(i32, i32), ChunkTracker>,
-    /// Queue of chunks to be saved, this queue should be sorted by 
+    /// Queue of chunks to be saved, this queue should be sorted by
     scheduled_saves: VecDeque<(i32, i32, Instant)>,
 }
 
@@ -30,7 +29,6 @@ impl Default for ChunkTrackers {
 }
 
 impl ChunkTrackers {
-
     /// Construct a new chunk tracker map.
     pub fn new() -> Self {
         Self {
@@ -42,7 +40,6 @@ impl ChunkTrackers {
     /// Notify the tracker of a block change to be sent later to players. This will also
     /// mark the chunk dirty.
     pub fn set_block(&mut self, pos: IVec3, block: u8, metadata: u8) {
-        
         let (cx, cz) = chunk::calc_chunk_pos_unchecked(pos);
         let tracker = self.inner.entry((cx, cz)).or_default();
 
@@ -53,7 +50,6 @@ impl ChunkTrackers {
         };
 
         tracker.set_block(local_pos, block, metadata);
-
     }
 
     /// Mark a chunk dirty, to be saved later.
@@ -67,14 +63,13 @@ impl ChunkTrackers {
     /// Internal method to schedule a save in the future at given timestamp, this will
     /// be sorted into the scheduled save queue.
     fn schedule_save(&mut self, cx: i32, cz: i32, instant: Instant) {
-        
         // Search the correct sorted (asc) index to insert the given time.
-        let index = self.scheduled_saves
-            .binary_search_by_key(&instant, |&(_ ,_, i)| i)
+        let index = self
+            .scheduled_saves
+            .binary_search_by_key(&instant, |&(_, _, i)| i)
             .unwrap_or_else(|index| index);
 
         self.scheduled_saves.insert(index, (cx, cz, instant));
-
     }
 
     /// Update the given player list to send new block changes into account. The given
@@ -104,7 +99,6 @@ impl ChunkTrackers {
             (cx, cz)
         })
     }
-
 }
 
 /// This structure tracks a chunk and record every block set in the chunk, this is used
@@ -146,11 +140,9 @@ struct ChunkSetBlock {
 }
 
 impl ChunkTracker {
-
-    /// Internally register the given set block, depending on the internal state the 
+    /// Internally register the given set block, depending on the internal state the
     /// change may be discarded and the whole modified area may be resent instead.
     fn set_block(&mut self, pos: ChunkLocalPos, block: u8, metadata: u8) {
-
         // This is the Notchian implementation threshold.
         const FULL_THRESHOLD: usize = 10;
 
@@ -161,7 +153,11 @@ impl ChunkTracker {
                 self.set_blocks_full = true;
                 self.set_blocks.clear(); // Can be cleared because useless now.
             } else {
-                self.set_blocks.push(ChunkSetBlock { pos, block, metadata });
+                self.set_blocks.push(ChunkSetBlock {
+                    pos,
+                    block,
+                    metadata,
+                });
                 // If the list was previously empty, we set min/max to initial pos.
                 if self.set_blocks.len() == 1 {
                     self.set_blocks_min = pos;
@@ -174,34 +170,31 @@ impl ChunkTracker {
         self.set_blocks_min.x = self.set_blocks_min.x.min(pos.x);
         self.set_blocks_min.y = self.set_blocks_min.y.min(pos.y);
         self.set_blocks_min.z = self.set_blocks_min.z.min(pos.z);
-        
+
         self.set_blocks_max.x = self.set_blocks_max.x.max(pos.x);
         self.set_blocks_max.y = self.set_blocks_max.y.max(pos.y);
         self.set_blocks_max.z = self.set_blocks_max.z.max(pos.z);
-
     }
 
     /// Update the given players by sending them the correct packets to update the player
-    /// client side. If the chunk is full of set blocks then the whole area is resent, 
+    /// client side. If the chunk is full of set blocks then the whole area is resent,
     /// else only individual changes are sent to the players loading the chunk.
-    /// 
+    ///
     /// Once this function has updated all players, all modifications are removed.
     fn update_players(&mut self, cx: i32, cz: i32, players: &[ServerPlayer], world: &World) {
-
         if self.set_blocks_full {
-
             let chunk = world.get_chunk(cx, cz).expect("chunk has been removed");
-            
-            let from = IVec3 { 
-                x: cx * 16 + self.set_blocks_min.x as i32, 
-                y: self.set_blocks_min.y as i32, 
+
+            let from = IVec3 {
+                x: cx * 16 + self.set_blocks_min.x as i32,
+                y: self.set_blocks_min.y as i32,
                 z: cz * 16 + self.set_blocks_min.z as i32,
             };
 
-            let size = IVec3 { 
-                x: (self.set_blocks_max.x - self.set_blocks_min.x + 1) as i32, 
-                y: (self.set_blocks_max.y - self.set_blocks_min.y + 1) as i32, 
-                z: (self.set_blocks_max.z - self.set_blocks_min.z + 1) as i32, 
+            let size = IVec3 {
+                x: (self.set_blocks_max.x - self.set_blocks_min.x + 1) as i32,
+                y: (self.set_blocks_max.y - self.set_blocks_min.y + 1) as i32,
+                z: (self.set_blocks_max.z - self.set_blocks_min.z + 1) as i32,
             };
 
             // trace!("sending partial chunk data for {cx}/{cz}, from {from}, size {size}");
@@ -212,12 +205,10 @@ impl ChunkTracker {
                     player.send(packet.clone());
                 }
             }
-
         } else if self.set_blocks.len() == 1 {
-
             let set_block = self.set_blocks[0];
             // trace!("sending single block for {cx}/{cz}, at {:?}", set_block.pos);
-            
+
             for player in players {
                 if player.tracked_chunks.contains(&(cx, cz)) {
                     player.send(OutPacket::BlockSet(proto::BlockSetPacket {
@@ -229,10 +220,10 @@ impl ChunkTracker {
                     }));
                 }
             }
-
         } else if !self.set_blocks.is_empty() {
-
-            let set_blocks = self.set_blocks.iter()
+            let set_blocks = self
+                .set_blocks
+                .iter()
                 .map(|set_block| proto::ChunkBlockSet {
                     x: set_block.pos.x,
                     y: set_block.pos.y,
@@ -255,18 +246,15 @@ impl ChunkTracker {
                     player.send(packet.clone());
                 }
             }
-
         }
 
         self.set_blocks_full = false;
         self.set_blocks.clear();
-
     }
 
     /// Mark this chunk as dirty, and return some instant if a save should be scheduled
     /// in the future for this chunk.
     fn set_dirty(&mut self) -> Option<Instant> {
-
         const MAX_INTERVAL: Duration = Duration::from_secs(60);
         const MIN_INTERVAL: Duration = Duration::from_secs(4);
         const INTERVAL_STEP: Duration = Duration::from_secs(4);
@@ -290,9 +278,12 @@ impl ChunkTracker {
                 // then we reduce the interval.
                 self.save_interval = self.save_interval.saturating_sub(INTERVAL_STEP);
             } else {
-                // If the time elapsed is less than or equal to current interval, we 
+                // If the time elapsed is less than or equal to current interval, we
                 // increase the save interval.
-                self.save_interval = self.save_interval.saturating_add(INTERVAL_STEP).min(MAX_INTERVAL);
+                self.save_interval = self
+                    .save_interval
+                    .saturating_add(INTERVAL_STEP)
+                    .min(MAX_INTERVAL);
             }
         }
 
@@ -304,36 +295,37 @@ impl ChunkTracker {
         let next_save = now + self.save_interval;
         self.last_save = Some(next_save);
         Some(next_save)
-
     }
-
 }
 
-
-/// Create a new chunk data packet for the given chunk. This only works for a single 
+/// Create a new chunk data packet for the given chunk. This only works for a single
 /// chunk and the given coordinate should be part of that chunk. The two arguments "from"
 /// and "to" are inclusive but might be modified to include more blocks if ths reduces
 /// computation.
-pub fn new_chunk_data_packet(chunk: &Chunk, mut from: IVec3, mut size: IVec3) -> proto::ChunkDataPacket {
-
+pub fn new_chunk_data_packet(
+    chunk: &Chunk,
+    mut from: IVec3,
+    mut size: IVec3,
+) -> proto::ChunkDataPacket {
     use flate2::write::ZlibEncoder;
     use flate2::Compression;
-    
-    debug_assert!(size.x != 0 && size.y != 0 && size.z != 0);
-    
-    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::fast());
-    chunk.write_data(&mut encoder, &mut from, &mut size).unwrap();
 
     debug_assert!(size.x != 0 && size.y != 0 && size.z != 0);
-    
+
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::fast());
+    chunk
+        .write_data(&mut encoder, &mut from, &mut size)
+        .unwrap();
+
+    debug_assert!(size.x != 0 && size.y != 0 && size.z != 0);
+
     proto::ChunkDataPacket {
         x: from.x,
-        y: from.y as i16, 
-        z: from.z, 
-        x_size: size.x as u8, 
-        y_size: size.y as u8, 
+        y: from.y as i16,
+        z: from.z,
+        x_size: size.x as u8,
+        y_size: size.y as u8,
         z_size: size.z as u8,
         compressed_data: Arc::new(encoder.finish().unwrap()),
     }
-    
 }

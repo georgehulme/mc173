@@ -2,26 +2,25 @@
 
 use glam::IVec3;
 
-use crate::block_entity::note_block::NoteBlockBlockEntity;
+use crate::block_entity::chest::ChestBlockEntity;
 use crate::block_entity::dispenser::DispenserBlockEntity;
 use crate::block_entity::furnace::FurnaceBlockEntity;
 use crate::block_entity::jukebox::JukeboxBlockEntity;
-use crate::block_entity::spawner::SpawnerBlockEntity;
+use crate::block_entity::note_block::NoteBlockBlockEntity;
 use crate::block_entity::piston::PistonBlockEntity;
-use crate::block_entity::chest::ChestBlockEntity;
 use crate::block_entity::sign::SignBlockEntity;
+use crate::block_entity::spawner::SpawnerBlockEntity;
 use crate::block_entity::BlockEntity;
 use crate::entity::EntityKind;
-use crate::item::ItemStack;
 use crate::geom::Face;
+use crate::item::ItemStack;
 
-use crate::serde::nbt::{NbtParseError, NbtCompound, NbtCompoundParse};
+use crate::serde::nbt::{NbtCompound, NbtCompoundParse, NbtParseError};
 
 use super::entity_kind_nbt;
 use super::slot_nbt;
 
 pub fn from_nbt(comp: NbtCompoundParse) -> Result<(IVec3, Box<BlockEntity>), NbtParseError> {
-
     let x = comp.get_int("x")?;
     let y = comp.get_int("y")?;
     let z = comp.get_int("z")?;
@@ -52,8 +51,9 @@ pub fn from_nbt(comp: NbtCompoundParse) -> Result<(IVec3, Box<BlockEntity>), Nbt
         }
         "MobSpawner" => {
             let spawner = SpawnerBlockEntity {
-                entity_kind: entity_kind_nbt::from_nbt(comp.get_string("EntityId")?).unwrap_or(EntityKind::Pig),
-                remaining_time: comp.get_short("Delay")? as u16
+                entity_kind: entity_kind_nbt::from_nbt(comp.get_string("EntityId")?)
+                    .unwrap_or(EntityKind::Pig),
+                remaining_time: comp.get_short("Delay")? as u16,
             };
             BlockEntity::Spawner(spawner)
         }
@@ -88,20 +88,25 @@ pub fn from_nbt(comp: NbtCompoundParse) -> Result<(IVec3, Box<BlockEntity>), Nbt
             }
             BlockEntity::Sign(sign)
         }
-        "RecordPlayer" => {
-            BlockEntity::Jukebox(JukeboxBlockEntity { 
-                record: comp.get_int("Record")? as u32
-            })
+        "RecordPlayer" => BlockEntity::Jukebox(JukeboxBlockEntity {
+            record: comp.get_int("Record")? as u32,
+        }),
+        _ => {
+            return Err(NbtParseError::new(
+                format!("{}/id", comp.path()),
+                "valid block entity id",
+            ))
         }
-        _ => return Err(NbtParseError::new(format!("{}/id", comp.path()), "valid block entity id"))
     });
 
     Ok((IVec3::new(x, y, z), block_entity))
-
 }
 
-pub fn to_nbt<'a>(comp: &'a mut NbtCompound, pos: IVec3, block_entity: &BlockEntity) -> &'a mut NbtCompound {
-
+pub fn to_nbt<'a>(
+    comp: &'a mut NbtCompound,
+    pos: IVec3,
+    block_entity: &BlockEntity,
+) -> &'a mut NbtCompound {
     comp.insert("x", pos.x);
     comp.insert("y", pos.y);
     comp.insert("z", pos.z);
@@ -113,7 +118,14 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, pos: IVec3, block_entity: &BlockEnt
         }
         BlockEntity::Furnace(furnace) => {
             comp.insert("id", "Furnace");
-            comp.insert("Items", slot_nbt::to_nbt_from_inv(&[furnace.input_stack, furnace.fuel_stack, furnace.output_stack]));
+            comp.insert(
+                "Items",
+                slot_nbt::to_nbt_from_inv(&[
+                    furnace.input_stack,
+                    furnace.fuel_stack,
+                    furnace.output_stack,
+                ]),
+            );
             comp.insert("BurnTime", furnace.burn_remaining_ticks);
             comp.insert("CookTime", furnace.smelt_ticks);
         }
@@ -123,7 +135,10 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, pos: IVec3, block_entity: &BlockEnt
         }
         BlockEntity::Spawner(spawner) => {
             comp.insert("id", "MobSpawner");
-            comp.insert("EntityId", entity_kind_nbt::to_nbt(spawner.entity_kind).unwrap_or("Pig"));
+            comp.insert(
+                "EntityId",
+                entity_kind_nbt::to_nbt(spawner.entity_kind).unwrap_or("Pig"),
+            );
             comp.insert("Delay", spawner.remaining_time.min(i16::MAX as _) as i16);
         }
         BlockEntity::NoteBlock(note_block) => {
@@ -134,14 +149,17 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, pos: IVec3, block_entity: &BlockEnt
             comp.insert("id", "Piston");
             comp.insert("blockId", piston.block as u32);
             comp.insert("blockData", piston.metadata as u32);
-            comp.insert("facing", match piston.face {
-                Face::NegY => 0i32,
-                Face::PosY => 1,
-                Face::NegZ => 2,
-                Face::PosZ => 3,
-                Face::NegX => 4,
-                Face::PosX => 5,
-            });
+            comp.insert(
+                "facing",
+                match piston.face {
+                    Face::NegY => 0i32,
+                    Face::PosY => 1,
+                    Face::NegZ => 2,
+                    Face::PosZ => 3,
+                    Face::NegX => 4,
+                    Face::PosX => 5,
+                },
+            );
             comp.insert("progress", piston.progress);
             comp.insert("extending", piston.extending);
         }
@@ -158,5 +176,4 @@ pub fn to_nbt<'a>(comp: &'a mut NbtCompound, pos: IVec3, block_entity: &BlockEnt
     }
 
     comp
-
 }

@@ -2,7 +2,6 @@
 
 use crate::geom::Face;
 
-
 /// Get the face of this door.
 #[inline]
 pub fn get_face(metadata: u8) -> Face {
@@ -11,7 +10,7 @@ pub fn get_face(metadata: u8) -> Face {
         1 => Face::NegZ,
         2 => Face::PosX,
         3 => Face::PosZ,
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 

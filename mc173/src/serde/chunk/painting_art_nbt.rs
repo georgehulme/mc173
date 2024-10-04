@@ -29,7 +29,7 @@ pub fn from_nbt(id: &str) -> Option<PaintingArt> {
         "BurningSkull" => PaintingArt::BurningSkull,
         "Skeleton" => PaintingArt::Skeleton,
         "DonkeyKong" => PaintingArt::DonkeyKong,
-        _ => return None
+        _ => return None,
     })
 }
 

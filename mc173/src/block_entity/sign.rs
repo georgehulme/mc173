@@ -1,6 +1,5 @@
 //! Sign block entity.
 
-
 #[derive(Debug, Clone, Default)]
 pub struct SignBlockEntity {
     /// Text line of this sign block.

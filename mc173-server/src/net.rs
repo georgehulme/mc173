@@ -2,20 +2,19 @@
 //! and could be used for any TCP and packet-based protocol. It is specialized in the
 //! [`proto`](crate::proto) crate.
 
-use std::io::{self, Read, Write, Cursor};
-use std::net::{SocketAddr, Shutdown};
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use std::time::Duration;
-use std::thread;
 use std::fmt;
+use std::io::{self, Cursor, Read, Write};
+use std::net::{Shutdown, SocketAddr};
+use std::sync::{Arc, RwLock};
+use std::thread;
+use std::time::Duration;
 
-use crossbeam_channel::{bounded, Sender, Receiver, TryRecvError};
+use crossbeam_channel::{bounded, Receiver, Sender, TryRecvError};
 
-use mio::{Poll, Events, Interest, Token};
-use mio::net::{TcpListener, TcpStream};
 use mio::event::Event;
-
+use mio::net::{TcpListener, TcpStream};
+use mio::{Events, Interest, Poll, Token};
 
 /// A server-bound packet (received and processed by the server).
 pub trait InPacket: Sized {
@@ -29,11 +28,10 @@ pub trait OutPacket {
     fn write(&self, write: &mut impl Write) -> io::Result<()>;
 }
 
-
 /// A packet server backed by a background thread that do all the hard processing. This
 /// network handle can be cloned as need, and every handle is able to both send and
 /// receive packets.
-/// 
+///
 /// To kill the server, every handle of it should be dropped.
 #[derive(Debug, Clone)]
 pub struct Network<I, O> {
@@ -48,29 +46,22 @@ where
     I: InPacket + Send + 'static,
     O: OutPacket + Send + 'static,
 {
-
     pub fn bind(addr: SocketAddr) -> io::Result<Self> {
-
         let poll = Poll::new()?;
         let mut listener = TcpListener::bind(addr)?;
-        poll.registry().register(&mut listener, LISTENER_TOKEN, Interest::READABLE)?;
+        poll.registry()
+            .register(&mut listener, LISTENER_TOKEN, Interest::READABLE)?;
 
-        // TODO: Adapt channel sizes depending on number of players, maybe unbounded 
+        // TODO: Adapt channel sizes depending on number of players, maybe unbounded
         // queue could be better for our case.
 
-        let (
-            commands_sender,
-            commands_receiver
-        ) = bounded(1000);
+        let (commands_sender, commands_receiver) = bounded(1000);
 
-        let (
-            events_sender,
-            events_receiver
-        ) = bounded(1000);
+        let (events_sender, events_receiver) = bounded(1000);
 
         // The poll thread.
         let poll_commands_sender = commands_sender.clone();
-        
+
         thread::Builder::new()
             .name("Packet Poll Thread".to_string())
             .spawn(move || {
@@ -81,8 +72,10 @@ where
                     poll,
                     next_token: CLIENT_FIRST_TOKEN,
                     clients: HashMap::new(),
-                }.run();
-            }).unwrap();
+                }
+                .run();
+            })
+            .unwrap();
 
         // The command thread.
         thread::Builder::new()
@@ -91,58 +84,64 @@ where
                 CommandThread::<O> {
                     commands_receiver,
                     clients: HashMap::new(),
-                }.run();
-            }).unwrap();
+                }
+                .run();
+            })
+            .unwrap();
 
         Ok(Self {
             commands_sender,
             events_receiver,
         })
-
     }
 
     /// Poll events from this packet server. If an I/O error is returned, the error is
-    /// critical and the 
+    /// critical and the
     pub fn poll(&self) -> io::Result<Option<NetworkEvent<I>>> {
-        loop { // A loop to ignore channel check.
+        loop {
+            // A loop to ignore channel check.
             return Ok(Some(match self.events_receiver.try_recv() {
                 Ok(ThreadEvent::ChannelCheck) => continue,
                 Ok(ThreadEvent::Accept { token }) => NetworkEvent::Accept {
-                    client: NetworkClient(token)
+                    client: NetworkClient(token),
                 },
                 Ok(ThreadEvent::Lost { token, error }) => NetworkEvent::Lost {
                     client: NetworkClient(token),
                     error,
                 },
                 Ok(ThreadEvent::Packet { token, packet }) => NetworkEvent::Packet {
-                    client: NetworkClient(token), 
+                    client: NetworkClient(token),
                     packet,
                 },
-                // Critical error, this should be the last event of the channel before 
+                // Critical error, this should be the last event of the channel before
                 // disconnection.
-                Ok(ThreadEvent::Error { error }) => return Err(error), 
+                Ok(ThreadEvent::Error { error }) => return Err(error),
                 Err(TryRecvError::Empty) => return Ok(None),
-                Err(TryRecvError::Disconnected) => 
-                    return Err(new_io_abort_error("previous error made this server unusable")),
+                Err(TryRecvError::Disconnected) => {
+                    return Err(new_io_abort_error(
+                        "previous error made this server unusable",
+                    ))
+                }
             }));
         }
     }
 
     pub fn send(&self, client: NetworkClient, packet: O) {
         // NOTE: Commands channel can never disconnect if a handle exists.
-        self.commands_sender.try_send(ThreadCommand::SingleClientPacket { 
-            token: client.0, 
-            packet
-        }).expect("commands channel is full");
+        self.commands_sender
+            .try_send(ThreadCommand::SingleClientPacket {
+                token: client.0,
+                packet,
+            })
+            .expect("commands channel is full");
     }
 
     pub fn disconnect(&self, client: NetworkClient) {
         // NOTE: Commands channel can never disconnect if a handle exists.
-        self.commands_sender.try_send(ThreadCommand::DisconnectClient {
-            token: client.0
-        }).expect("commands channel is full");
+        self.commands_sender
+            .try_send(ThreadCommand::DisconnectClient { token: client.0 })
+            .expect("commands channel is full");
     }
-
 }
 
 /// A handle to a client produced by a packet server. This handle can be used with a
@@ -152,24 +151,22 @@ pub struct NetworkClient(Token);
 
 impl fmt::Debug for NetworkClient {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("NetworkClient").field(&self.0.0).finish()
+        f.debug_tuple("NetworkClient").field(&self.0 .0).finish()
     }
 }
 
 impl NetworkClient {
-
     /// Return the numeric id of this network client, many used for displaying purpose.
     #[inline]
     pub fn id(self) -> u64 {
-        self.0.0 as u64
+        self.0 .0 as u64
     }
-
 }
 
 /// An event of the packet
 #[derive(Debug)]
 pub enum NetworkEvent<I> {
-    /// A client 
+    /// A client
     Accept {
         /// The client handle that was accepted.
         client: NetworkClient,
@@ -190,14 +187,12 @@ pub enum NetworkEvent<I> {
     },
 }
 
-
 /// Internal polling token used for the listening socket.
 const LISTENER_TOKEN: Token = Token(0);
 /// First token associated to a client.
 const CLIENT_FIRST_TOKEN: Token = Token(1);
 /// Size of internal buffers for incoming client's data.
 const BUF_SIZE: usize = 1024;
-
 
 /// Shared immutable client state.
 struct SharedClient {
@@ -213,7 +208,7 @@ struct SharedClient {
 /// for incoming commands, this would require a sort of *select* between poll events
 /// and channel commands, but we can't do that.
 struct PollThread<I, O> {
-    /// Commands sent to the command thread, to register and deregister 
+    /// Commands sent to the command thread, to register and deregister
     commands_sender: Sender<ThreadCommand<O>>,
     /// Events sent to the handle.
     events_sender: Sender<ThreadEvent<I>>,
@@ -238,11 +233,9 @@ struct PollClient {
 }
 
 impl<I: InPacket, O: OutPacket> PollThread<I, O> {
-
     fn run(mut self) {
-        
         let mut events = Events::with_capacity(100);
-        
+
         // While events channel is not disconnected.
         while self.events_sender.send(ThreadEvent::ChannelCheck).is_ok() {
             if let Err(e) = self.poll(&mut events) {
@@ -251,17 +244,14 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
                 return;
             }
         }
-
     }
 
     /// Internal function just to make error try in common.
     fn poll(&mut self, events: &mut Events) -> io::Result<bool> {
-
         // NOTE: We use 1 second timeout in order to regularly check channel.
         self.poll.poll(events, Some(Duration::from_secs(1)))?;
 
         for event in events.iter() {
-            
             let run = match event.token() {
                 LISTENER_TOKEN => self.handle_listener()?,
                 _ => self.handle_client(event),
@@ -271,19 +261,15 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
             if !run {
                 return Ok(false);
             }
-
         }
 
         // No error, just continue the thread.
         Ok(true)
-
     }
 
     /// Internal function to handle a readable polling event from the TCP listener stream.
     fn handle_listener(&mut self) -> io::Result<bool> {
-
         loop {
-
             let mut stream = match self.listener.accept() {
                 Ok((stream, _addr)) => stream,
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => return Ok(true),
@@ -293,7 +279,11 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
             // Get a new unique token and register events on this stream.
             let token = self.next_token;
             self.next_token = Token(token.0.checked_add(1).expect("out of client token"));
-            self.poll.registry().register(&mut stream, token, Interest::READABLE | Interest::WRITABLE)?;
+            self.poll.registry().register(
+                &mut stream,
+                token,
+                Interest::READABLE | Interest::WRITABLE,
+            )?;
 
             let shared = Arc::new(SharedClient {
                 stream: RwLock::new(stream),
@@ -301,30 +291,40 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
 
             // NOTE: Blocking send because this would have no sense to continue if the
             // command thread is not aware of the new client.
-            self.commands_sender.send(ThreadCommand::NewClient { token, shared: Arc::clone(&shared) })
-                .expect("commands channel should not be disconnected while this poll thread exists");
+            self.commands_sender
+                .send(ThreadCommand::NewClient {
+                    token,
+                    shared: Arc::clone(&shared),
+                })
+                .expect(
+                    "commands channel should not be disconnected while this poll thread exists",
+                );
 
             // NOTE: Blocking send is intentional.
-            if self.events_sender.send(ThreadEvent::Accept { token }).is_err() {
+            if self
+                .events_sender
+                .send(ThreadEvent::Accept { token })
+                .is_err()
+            {
                 // If the events channel is disconnected, stop thread.
                 return Ok(false);
             }
 
-            self.clients.insert(token, PollClient {
-                shared, 
-                buf: Box::new([0; BUF_SIZE]),
-                buf_cursor: 0
-            });
-
+            self.clients.insert(
+                token,
+                PollClient {
+                    shared,
+                    buf: Box::new([0; BUF_SIZE]),
+                    buf_cursor: 0,
+                },
+            );
         }
-
     }
 
     /// Internal function to handle a polling event from a client. This function doesn't
-    /// generate errors, if errors happen they are pushed as client events. 
+    /// generate errors, if errors happen they are pushed as client events.
     /// The function returns true if the thread should continue.
     fn handle_client(&mut self, event: &Event) -> bool {
-
         let token = event.token();
 
         if event.is_read_closed() || event.is_write_closed() {
@@ -338,13 +338,12 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
             // Try reading the client, if an error happen we directly ends the client.
             match self.handle_client_read(token) {
                 Err(e) => self.handle_client_close(token, Some(e)),
-                Ok(run) => run
+                Ok(run) => run,
             }
         } else {
             // No interesting event, just continue thread.
             true
         }
-
     }
 
     /// Handle a readable client event. This return false if the global loop should stop.
@@ -352,9 +351,10 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
     /// and the client should be closed. If no error, the returned boolean indicates if
     /// the thread should continue.**
     fn handle_client_read(&mut self, token: Token) -> io::Result<bool> {
-
         // Just ignore no longer existing clients.
-        let Some(client) = self.clients.get_mut(&token) else { return Ok(true) };
+        let Some(client) = self.clients.get_mut(&token) else {
+            return Ok(true);
+        };
         let stream = client.shared.stream.read().expect("poisoned");
         let mut stream = &*stream;
 
@@ -369,7 +369,6 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
         }
 
         loop {
-
             // TODO: Handle packet not found in a fully filled buffer.
             let buf = &client.buf[..client.buf_cursor];
 
@@ -382,7 +381,11 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
 
             // If the channel was disconnect, return Ok(false) to stop the thread, because
             // all handles have been dropped.
-            if self.events_sender.send(ThreadEvent::Packet { token, packet }).is_err() {
+            if self
+                .events_sender
+                .send(ThreadEvent::Packet { token, packet })
+                .is_err()
+            {
                 return Ok(false);
             }
 
@@ -391,17 +394,16 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
             // Remove the buffer part that we successfully read.
             client.buf.copy_within(read_length..client.buf_cursor, 0);
             client.buf_cursor -= read_length;
-
         }
-
     }
 
     /// Internal function to actually close and forget a client (if not already the case).
     /// This function returns true if the thread should continue to run.
     fn handle_client_close(&mut self, token: Token, error: Option<io::Error>) -> bool {
-        
         // Just ignore no longer existing clients.
-        let Some(client) = self.clients.remove(&token) else { return true; };
+        let Some(client) = self.clients.remove(&token) else {
+            return true;
+        };
 
         // We block until we can write the stream, blocking is not a problem here because
         // there are only too possible accessor for the stream: this poll thread and the
@@ -410,26 +412,27 @@ impl<I: InPacket, O: OutPacket> PollThread<I, O> {
         // soon, when it will finish writing a packet.
         let mut stream = client.shared.stream.write().expect("poisoned");
 
-        // NOTE: Shutting down this stream will trigger events in the PollThread and 
+        // NOTE: Shutting down this stream will trigger events in the PollThread and
         // deregister the event.
         let _ = stream.shutdown(Shutdown::Both);
         let _ = self.poll.registry().deregister(&mut *stream);
 
         // NOTE: Blocking intentionally (read same comment above).
-        self.commands_sender.send(ThreadCommand::LostClient { token })
+        self.commands_sender
+            .send(ThreadCommand::LostClient { token })
             .expect("commands channel should not be disconnected while this poll thread exists");
 
         // NOTE: We use blocking send, because there is no point continuing if we can no
         // longer send events, just wait for handles to process events.
         // NOTE: We also return false (stop thread) if the channel is disconnected (that
         // would mean all handles are gone).
-        self.events_sender.send(ThreadEvent::Lost { token, error }).is_ok()
-
+        self.events_sender
+            .send(ThreadEvent::Lost { token, error })
+            .is_ok()
     }
-
 }
 
-/// Internal command thread. This thread stores all clients and their buffers, and 
+/// Internal command thread. This thread stores all clients and their buffers, and
 /// handles all the overhead of encoding and decoding packets. It terminates when all
 /// command senders are gone (all handles and the poll thread, so the poll thread must
 /// terminate in order to terminate this one).
@@ -441,7 +444,6 @@ struct CommandThread<O> {
 }
 
 impl<O: OutPacket> CommandThread<O> {
-
     /// Run the thread until termination or critical error.
     fn run(mut self) {
         // This receive commands while there is any sender.
@@ -465,7 +467,9 @@ impl<O: OutPacket> CommandThread<O> {
 
     fn handle_client_disconnect(&mut self, token: Token) {
         // Just ignore no longer existing clients.
-        let Some(client) = self.clients.get(&token) else { return };
+        let Some(client) = self.clients.get(&token) else {
+            return;
+        };
         let stream = client.stream.read().expect("poisoned");
         // This shutdown should be seen by the poll thread, and therefore properly
         // shutdown and deregister, and a `ThreadCommand::LostClient` should come back
@@ -477,12 +481,13 @@ impl<O: OutPacket> CommandThread<O> {
     /// it should be considered critical for the client, and the client should be closed.
     fn handle_client_send(&mut self, token: Token, packet: O) {
         // Just ignore no longer existing clients.
-        let Some(client) = self.clients.get(&token) else { return };
+        let Some(client) = self.clients.get(&token) else {
+            return;
+        };
         let stream = client.stream.read().expect("poisoned");
         // NOTE: For now we ignore I/O errors because we can't send them to handle.
         let _ = packet.write(&mut &*stream);
     }
-
 }
 
 enum ThreadCommand<O> {
@@ -492,27 +497,18 @@ enum ThreadCommand<O> {
         shared: Arc<SharedClient>,
     },
     /// Sent by the poll thread when a client should be forget by the command thread
-    LostClient {
-        token: Token,
-    },
+    LostClient { token: Token },
     /// Sent by handles to force disconnect a client.
-    DisconnectClient {
-        token: Token,
-    },
+    DisconnectClient { token: Token },
     /// Send a single packet to a client.
-    SingleClientPacket {
-        token: Token,
-        packet: O,
-    }
+    SingleClientPacket { token: Token, packet: O },
 }
 
 enum ThreadEvent<I> {
     /// Internal event to check if the channel is still connected.
     ChannelCheck,
     /// A client was accepted and can receive and send packets from now on.
-    Accept {
-        token: Token,
-    },
+    Accept { token: Token },
     Lost {
         token: Token,
         /// Some error if that caused the client to be lost, no error means that the
@@ -520,16 +516,10 @@ enum ThreadEvent<I> {
         error: Option<io::Error>,
     },
     /// A packet was received from a client.
-    Packet {
-        token: Token,
-        packet: I,
-    },
+    Packet { token: Token, packet: I },
     /// An I/O error that caused the background thread to crash, it's not recoverable.
-    Error {
-        error: io::Error,
-    }
+    Error { error: io::Error },
 }
-
 
 fn new_io_abort_error(message: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::ConnectionAborted, message)

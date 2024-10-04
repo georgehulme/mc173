@@ -1,11 +1,10 @@
 //! Different kind of pseudo-random number generator.
 
-use std::sync::atomic::{AtomicI64, Ordering};
-use std::time::{UNIX_EPOCH, SystemTime};
 use std::num::Wrapping;
+use std::sync::atomic::{AtomicI64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use glam::{Vec3, DVec3};
-
+use glam::{DVec3, Vec3};
 
 const MULTIPLIER: Wrapping<i64> = Wrapping(0x5DEECE66D);
 const ADDEND: Wrapping<i64> = Wrapping(0xB);
@@ -14,12 +13,10 @@ const MASK: Wrapping<i64> = Wrapping((1 << 48) - 1);
 const FLOAT_DIV: f32 = (1u32 << 24) as f32;
 const DOUBLE_DIV: f64 = (1u64 << 53) as f64;
 
-
 #[inline]
 fn initial_scramble(seed: i64) -> Wrapping<i64> {
     (Wrapping(seed) ^ MULTIPLIER) & MASK
 }
-
 
 /// Generate a new seed in the same way as `java.f.Random` (same constants).
 fn gen_seed() -> i64 {
@@ -35,14 +32,13 @@ fn gen_seed() -> i64 {
                 // as safe as the Java implementation.
                 return match SystemTime::now().duration_since(UNIX_EPOCH) {
                     Ok(d) => next ^ (d.as_nanos() as i64),
-                    Err(_) => next
+                    Err(_) => next,
                 };
             }
-            Err(old) => current = old
+            Err(old) => current = old,
         }
     }
 }
-
 
 /// A pseudo-random number generator ported from the Java standard *RNG* with additional
 /// utility methods better suited for rust.
@@ -59,10 +55,12 @@ impl Default for JavaRandom {
 }
 
 impl JavaRandom {
-
     #[inline]
     pub fn new(seed: i64) -> JavaRandom {
-        JavaRandom { seed: initial_scramble(seed), next_gaussian: None }
+        JavaRandom {
+            seed: initial_scramble(seed),
+            next_gaussian: None,
+        }
     }
 
     #[inline]
@@ -72,7 +70,10 @@ impl JavaRandom {
 
     #[inline]
     pub fn new_blank() -> JavaRandom {
-        JavaRandom { seed: Wrapping(0), next_gaussian: None }
+        JavaRandom {
+            seed: Wrapping(0),
+            next_gaussian: None,
+        }
     }
 
     #[inline]
@@ -101,14 +102,12 @@ impl JavaRandom {
     }
 
     pub fn next_int_bounded(&mut self, bound: i32) -> i32 {
-
         debug_assert!(bound >= 0, "bound is negative");
 
         if (bound & -bound) == bound {
             // If the bound is a power of two, this is simpler.
             (((bound as i64).wrapping_mul(self.next(31) as i64)) >> 31) as i32
         } else {
-
             let mut bits;
             let mut val;
 
@@ -121,9 +120,7 @@ impl JavaRandom {
             }
 
             val
-
         }
-
     }
 
     pub fn next_long(&mut self) -> i64 {
@@ -163,8 +160,8 @@ impl JavaRandom {
     /// Get the next pseudo-random single-precision float vector, x, y and z.
     /// **This is not part of the standard Java class.**
     pub fn next_float_vec(&mut self) -> Vec3 {
-        Vec3 { 
-            x: self.next_float(), 
+        Vec3 {
+            x: self.next_float(),
             y: self.next_float(),
             z: self.next_float(),
         }
@@ -174,18 +171,18 @@ impl JavaRandom {
     /// **This is not part of the standard Java class.**
     pub fn next_double_vec(&mut self) -> DVec3 {
         DVec3 {
-            x: self.next_double(), 
+            x: self.next_double(),
             y: self.next_double(),
             z: self.next_double(),
         }
     }
 
-    /// Get the next pseudo-random double-precision double vector, x, y and z, 
+    /// Get the next pseudo-random double-precision double vector, x, y and z,
     /// with Gaussian distribution.
     /// **This is not part of the standard Java class.**
     pub fn next_gaussian_vec(&mut self) -> DVec3 {
         DVec3 {
-            x: self.next_gaussian(), 
+            x: self.next_gaussian(),
             y: self.next_gaussian(),
             z: self.next_gaussian(),
         }
@@ -214,5 +211,4 @@ impl JavaRandom {
         assert!(!items.is_empty());
         &mut items[self.next_int_bounded(items.len() as i32) as usize]
     }
-
 }

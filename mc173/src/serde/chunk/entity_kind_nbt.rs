@@ -26,7 +26,7 @@ pub fn from_nbt(id: &str) -> Option<EntityKind> {
         "FallingSand" => EntityKind::FallingBlock,
         "Minecart" => EntityKind::Minecart,
         "Boat" => EntityKind::Boat,
-        _ => return None
+        _ => return None,
     })
 }
 
@@ -54,6 +54,6 @@ pub fn to_nbt(kind: EntityKind) -> Option<&'static str> {
         EntityKind::Skeleton => "Skeleton",
         EntityKind::Spider => "Spider",
         EntityKind::Zombie => "Zombie",
-        _ => return None // Not serializable
+        _ => return None, // Not serializable
     })
 }

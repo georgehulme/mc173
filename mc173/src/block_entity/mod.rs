@@ -5,14 +5,13 @@ use glam::IVec3;
 use crate::world::World;
 
 pub mod chest;
-pub mod furnace;
 pub mod dispenser;
-pub mod spawner;
+pub mod furnace;
+pub mod jukebox;
 pub mod note_block;
 pub mod piston;
 pub mod sign;
-pub mod jukebox;
-
+pub mod spawner;
 
 /// All kinds of block entities.
 #[derive(Debug, Clone)]
@@ -28,7 +27,6 @@ pub enum BlockEntity {
 }
 
 impl BlockEntity {
-
     /// Tick the block entity at its position in the world.
     pub fn tick(&mut self, world: &mut World, pos: IVec3) {
         match self {
@@ -42,5 +40,4 @@ impl BlockEntity {
             BlockEntity::Jukebox(_) => (),
         }
     }
-
 }

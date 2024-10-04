@@ -2,9 +2,8 @@
 
 use crate::geom::Face;
 
-
 /// The the face the lever is connected to. In b1.7.3, levers can only attach to X/Z and
-/// bottom Y. This function also returns the secondary face where this lever's stick 
+/// bottom Y. This function also returns the secondary face where this lever's stick
 /// points to when not active.
 #[inline]
 pub fn get_face(metadata: u8) -> Option<(Face, Face)> {
@@ -15,7 +14,7 @@ pub fn get_face(metadata: u8) -> Option<(Face, Face)> {
         4 => (Face::PosZ, Face::PosY),
         5 => (Face::NegY, Face::PosZ),
         6 => (Face::NegY, Face::PosX),
-        _ => return None
+        _ => return None,
     })
 }
 

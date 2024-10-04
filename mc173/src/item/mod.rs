@@ -4,7 +4,6 @@ use crate::block;
 
 pub mod attack;
 
-
 /// Internal macro to easily define blocks registry.
 macro_rules! items {
     (
@@ -137,7 +136,6 @@ items! {
     RECORD_CAT/2001:        Item::new("record_cat").set_max_stack_size(1),
 }
 
-
 /// Get an item from its numeric id.
 pub fn from_id(id: u16) -> &'static Item {
     if id < 256 {
@@ -149,11 +147,12 @@ pub fn from_id(id: u16) -> &'static Item {
 
 /// Find an item id from its name. **Note that this will not find block items.
 pub fn from_name(name: &str) -> Option<u16> {
-    ITEMS.iter().enumerate()
+    ITEMS
+        .iter()
+        .enumerate()
         .find(|(_, item)| item.name == name)
         .map(|(i, _)| (i + 256) as u16)
 }
-
 
 /// This structure describe a block.
 #[derive(Debug, Clone, Copy)]
@@ -169,7 +168,6 @@ pub struct Item {
 }
 
 impl Item {
-
     pub const fn new(name: &'static str) -> Self {
         Self {
             name,
@@ -196,9 +194,7 @@ impl Item {
         self.max_damage = max_damage;
         self
     }
-
 }
-
 
 /// An item stack defines the actual number of items and their damage value.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -212,25 +208,40 @@ pub struct ItemStack {
 }
 
 impl ItemStack {
-
-    pub const EMPTY: Self = Self { id: block::AIR as u16, size: 0, damage: 0 };
+    pub const EMPTY: Self = Self {
+        id: block::AIR as u16,
+        size: 0,
+        damage: 0,
+    };
 
     /// Shortcut constructor for an item stack with single item.
     pub const fn new_single(id: u16, damage: u16) -> Self {
-        Self { id, size: 1, damage }
+        Self {
+            id,
+            size: 1,
+            damage,
+        }
     }
-    
+
     pub const fn new_sized(id: u16, damage: u16, size: u16) -> Self {
         Self { id, size, damage }
     }
 
     /// Shortcut constructor for an item stack constructed from a block id and metadata.
     pub const fn new_block(id: u8, metadata: u8) -> Self {
-        Self { id: id as u16, size: 1, damage: metadata as u16}
+        Self {
+            id: id as u16,
+            size: 1,
+            damage: metadata as u16,
+        }
     }
 
     pub const fn new_block_sized(id: u8, metadata: u8, size: u16) -> Self {
-        Self { id: id as u16, size, damage: metadata as u16 }
+        Self {
+            id: id as u16,
+            size,
+            damage: metadata as u16,
+        }
     }
 
     pub const fn with_size(mut self, size: u16) -> ItemStack {
@@ -243,14 +254,14 @@ impl ItemStack {
         self
     }
 
-    /// Return true if this item stack is air, which is a special case where the item 
+    /// Return true if this item stack is air, which is a special case where the item
     /// stack represent an empty slot.
     pub fn is_empty(self) -> bool {
         self.id == block::AIR as u16 || self.size == 0
     }
 
     /// Simplify this item stack by converting it into `None` if the item is just a air
-    /// block, which is equivalent to no item for Minecraft, regardless of the damage 
+    /// block, which is equivalent to no item for Minecraft, regardless of the damage
     /// value or stack size.
     pub fn to_non_empty(self) -> Option<ItemStack> {
         if self.is_empty() {
@@ -280,5 +291,4 @@ impl ItemStack {
         }
         self
     }
-
 }

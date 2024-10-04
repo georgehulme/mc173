@@ -6,7 +6,6 @@ pub(crate) fn default<T: Default>() -> T {
     T::default()
 }
 
-
 /// A fading average
 #[derive(Debug, Clone, Default)]
 pub struct FadingAverage {
@@ -14,7 +13,6 @@ pub struct FadingAverage {
 }
 
 impl FadingAverage {
-
     #[inline]
     pub fn push(&mut self, value: f32, factor: f32) {
         self.value = (self.value * (1.0 - factor)) + value * factor;
@@ -24,9 +22,7 @@ impl FadingAverage {
     pub fn get(&self) -> f32 {
         self.value
     }
-
 }
-
 
 /// Internal utility function to split a string at a given byte index, but while keeping
 /// utf8 boundary and not panicking like [`str::split_at`]. A value greater than `s.len()`

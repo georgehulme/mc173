@@ -2,7 +2,6 @@
 
 use crate::geom::Face;
 
-
 /// Get the face this torch is attached to.
 #[inline]
 pub fn get_face(metadata: u8) -> Option<Face> {
@@ -12,8 +11,8 @@ pub fn get_face(metadata: u8) -> Option<Face> {
         3 => Face::NegZ,
         4 => Face::PosZ,
         5 => Face::NegY,
-        _ => return None
-    })  
+        _ => return None,
+    })
 }
 
 #[inline]

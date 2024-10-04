@@ -2,21 +2,19 @@
 
 use glam::IVec3;
 
+use crate::block;
 use crate::block::material::Material;
 use crate::block_entity::BlockEntity;
 use crate::geom::Face;
-use crate::block;
 
 use super::{Event, World};
 
-
 /// Methods related to block interactions when client clicks on a block.
 impl World {
-
     /// Interact with a block at given position. This function returns the interaction
-    /// result to indicate if the interaction was handled, or if it was 
-    /// 
-    /// The second argument `breaking` indicates if the interaction originate from a 
+    /// result to indicate if the interaction was handled, or if it was
+    ///
+    /// The second argument `breaking` indicates if the interaction originate from a
     /// player breaking the block.
     pub fn interact_block(&mut self, pos: IVec3, breaking: bool) -> Interaction {
         if let Some((id, metadata)) = self.get_block(pos) {
@@ -28,24 +26,29 @@ impl World {
 
     /// Internal function to handle block interaction at given position and with known
     /// block and metadata.
-    pub(super) fn interact_block_unchecked(&mut self, pos: IVec3, id: u8, metadata: u8, breaking: bool) -> Interaction {
+    pub(super) fn interact_block_unchecked(
+        &mut self,
+        pos: IVec3,
+        id: u8,
+        metadata: u8,
+        breaking: bool,
+    ) -> Interaction {
         match id {
             block::BUTTON => self.interact_button(pos, metadata),
             block::LEVER => self.interact_lever(pos, metadata),
             block::TRAPDOOR => self.interact_trapdoor(pos, metadata),
             block::IRON_DOOR => true,
             block::WOOD_DOOR => self.interact_wood_door(pos, metadata),
-            block::REPEATER |
-            block::REPEATER_LIT => self.interact_repeater(pos, id, metadata),
+            block::REPEATER | block::REPEATER_LIT => self.interact_repeater(pos, id, metadata),
             block::REDSTONE_ORE => self.interact_redstone_ore(pos),
             block::CRAFTING_TABLE => return Interaction::CraftingTable { pos },
             block::CHEST => return self.interact_chest(pos),
-            block::FURNACE |
-            block::FURNACE_LIT => return self.interact_furnace(pos),
+            block::FURNACE | block::FURNACE_LIT => return self.interact_furnace(pos),
             block::DISPENSER => return self.interact_dispenser(pos),
             block::NOTE_BLOCK => self.interact_note_block(pos, breaking),
-            _ => return Interaction::None
-        }.into()
+            _ => return Interaction::None,
+        }
+        .into()
     }
 
     /// Interact with a button block.
@@ -73,13 +76,11 @@ impl World {
     }
 
     fn interact_wood_door(&mut self, pos: IVec3, mut metadata: u8) -> bool {
-
         if block::door::is_upper(metadata) {
             if let Some((block::WOOD_DOOR, metadata)) = self.get_block(pos - IVec3::Y) {
                 self.interact_wood_door(pos - IVec3::Y, metadata);
             }
         } else {
-
             let open = block::door::is_open(metadata);
             block::door::set_open(&mut metadata, !open);
 
@@ -89,11 +90,9 @@ impl World {
                 block::door::set_upper(&mut metadata, true);
                 self.set_block_notify(pos + IVec3::Y, block::WOOD_DOOR, metadata);
             }
-
         }
 
         true
-
     }
 
     fn interact_repeater(&mut self, pos: IVec3, id: u8, mut metadata: u8) -> bool {
@@ -105,13 +104,12 @@ impl World {
 
     fn interact_redstone_ore(&mut self, pos: IVec3) -> bool {
         self.set_block_notify(pos, block::REDSTONE_ORE_LIT, 0);
-        false  // Notchian client lit the ore but do not mark the interaction.
+        false // Notchian client lit the ore but do not mark the interaction.
     }
 
     fn interact_chest(&mut self, pos: IVec3) -> Interaction {
-
         let Some(BlockEntity::Chest(_)) = self.get_block_entity(pos) else {
-            return Interaction::Handled
+            return Interaction::Handled;
         };
 
         if self.is_block_opaque_cube(pos + IVec3::Y) {
@@ -120,7 +118,9 @@ impl World {
 
         for face in Face::HORIZONTAL {
             let face_pos = pos + face.delta();
-            if self.is_block(face_pos, block::CHEST) && self.is_block_opaque_cube(face_pos + IVec3::Y) {
+            if self.is_block(face_pos, block::CHEST)
+                && self.is_block_opaque_cube(face_pos + IVec3::Y)
+            {
                 return Interaction::Handled;
             }
         }
@@ -141,7 +141,6 @@ impl World {
         }
 
         Interaction::Chest { pos: all_pos }
-
     }
 
     fn interact_furnace(&mut self, pos: IVec3) -> Interaction {
@@ -161,7 +160,6 @@ impl World {
     }
 
     fn interact_note_block(&mut self, pos: IVec3, breaking: bool) -> bool {
-
         let Some(BlockEntity::NoteBlock(note_block)) = self.get_block_entity_mut(pos) else {
             return true;
         };
@@ -184,20 +182,14 @@ impl World {
             _ => 0,
         };
 
-        self.push_event(Event::Block { 
-            pos, 
-            inner: super::BlockEvent::NoteBlock { 
-                instrument, 
-                note,
-            },
+        self.push_event(Event::Block {
+            pos,
+            inner: super::BlockEvent::NoteBlock { instrument, note },
         });
-        
+
         true
-
     }
-
 }
-
 
 /// The result of an interaction with a block in the world.
 #[derive(Debug, Clone)]
@@ -206,7 +198,7 @@ pub enum Interaction {
     None,
     /// An interaction has been handled by the world.
     Handled,
-    /// A crafting table has been interacted, the front-end should interpret this and 
+    /// A crafting table has been interacted, the front-end should interpret this and
     /// open the crafting table window.
     CraftingTable {
         /// Position of the crafting table being interacted.
@@ -238,6 +230,10 @@ pub enum Interaction {
 impl From<bool> for Interaction {
     #[inline]
     fn from(value: bool) -> Self {
-        if value { Self::Handled } else { Self::None }
+        if value {
+            Self::Handled
+        } else {
+            Self::None
+        }
     }
 }

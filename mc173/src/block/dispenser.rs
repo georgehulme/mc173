@@ -2,7 +2,6 @@
 
 use crate::geom::Face;
 
-
 /// Get facing of the dispenser.
 pub fn get_face(metadata: u8) -> Option<Face> {
     Some(match metadata {
@@ -10,7 +9,7 @@ pub fn get_face(metadata: u8) -> Option<Face> {
         3 => Face::PosZ,
         4 => Face::NegX,
         5 => Face::PosX,
-        _ => return None
+        _ => return None,
     })
 }
 

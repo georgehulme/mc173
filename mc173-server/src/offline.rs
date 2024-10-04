@@ -2,7 +2,6 @@
 
 use glam::{DVec3, Vec2};
 
-
 /// An offline player defines the saved data of a player that is not connected.
 #[derive(Debug)]
 pub struct OfflinePlayer {

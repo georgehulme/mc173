@@ -1,26 +1,25 @@
 //! Entities structures and logic implementation.
 
-use glam::{DVec3, Vec2, IVec3};
+use glam::{DVec3, IVec3, Vec2};
 
-use crate::block::material::Material;
-use crate::util::default as def;
-use crate::geom::{BoundingBox, Face};
-use crate::rand::JavaRandom;
-use crate::item::ItemStack;
-use crate::world::World;
 use crate::block;
+use crate::block::material::Material;
+use crate::geom::{BoundingBox, Face};
+use crate::item::ItemStack;
+use crate::rand::JavaRandom;
+use crate::util::default as def;
+use crate::world::World;
 
 pub mod common;
 
 mod tick;
-mod tick_state;
 mod tick_ai;
 mod tick_attack;
+mod tick_state;
 
-use tick_state::tick_state;
 use tick_ai::tick_ai;
 use tick_attack::tick_attack;
-
+use tick_state::tick_state;
 
 /// Kind of entity, without actual data. This enumeration can be used to construct a
 /// real entity instance with default values, to be modified later.
@@ -56,7 +55,7 @@ pub enum EntityKind {
 }
 
 /// Category of entity enumeration, this defines various common properties for groups of
-/// entities, such as natural spawning properties. 
+/// entities, such as natural spawning properties.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EntityCategory {
     /// All animal entities.
@@ -131,7 +130,7 @@ pub struct Base {
     /// are typically non-persistent because these are not real entities. Some entities
     /// cannot be persistent as they are not supported by the Notchian serialization.
     pub persistent: bool,
-    /// The bounding box is defining the actual position from the size of the entity, the 
+    /// The bounding box is defining the actual position from the size of the entity, the
     /// actual position of the entity is derived from it. This is recomputed with the size
     /// by `tick_base` method when entity isn't coherent.
     pub bb: BoundingBox,
@@ -141,11 +140,11 @@ pub struct Base {
     /// True if an entity pos event should be sent after update.
     /// The current entity velocity.
     pub vel: DVec3,
-    /// Yaw a pitch angles of this entity's look. These are in radians with no range 
+    /// Yaw a pitch angles of this entity's look. These are in radians with no range
     /// guarantee, although this will often be normalized in 2pi range. The yaw angle
     /// in Minecraft is set to zero when pointing toward PosZ, and then rotate clockwise
     /// to NegX, NegZ and then PosX.
-    /// 
+    ///
     /// Yaw is X and pitch is Y.
     pub look: Vec2,
     /// Lifetime of the entity since it was spawned in the world, it increase at every
@@ -196,7 +195,7 @@ pub struct Hurt {
 #[derive(Debug, Clone, Default)]
 pub struct Living {
     /// Set to true if an entity is artificial, as opposed to natural. If not artificial,
-    /// an entity is despawned when too far from the closest player (maximum distance of 
+    /// an entity is despawned when too far from the closest player (maximum distance of
     /// 128.0 blocks).
     pub artificial: bool,
     /// The health.
@@ -280,20 +279,20 @@ pub struct Painting {
 
 impl Default for Painting {
     fn default() -> Self {
-        Self { 
+        Self {
             block_pos: Default::default(),
-            face: Face::NegX, 
-            art: Default::default(), 
+            face: Face::NegX,
+            art: Default::default(),
             check_valid_time: Default::default(),
         }
     }
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Boat { }
+pub struct Boat {}
 
 #[derive(Debug, Clone, Default)]
-pub enum Minecart { 
+pub enum Minecart {
     /// A normal minecart for living entity transportation.
     #[default]
     Normal,
@@ -308,21 +307,21 @@ pub enum Minecart {
         push_z: f64,
         /// Remaining fuel amount.
         fuel: u32,
-    }
+    },
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Bobber { 
-    /// Some entity id if this bobber is attached to an entity instead of floating in 
+pub struct Bobber {
+    /// Some entity id if this bobber is attached to an entity instead of floating in
     /// water.
     pub attached_id: Option<u32>,
-    /// The remaining time for the bobber to be caught and have a chance of getting a 
+    /// The remaining time for the bobber to be caught and have a chance of getting a
     /// fish.
     pub catch_time: u16,
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct LightningBolt { }
+pub struct LightningBolt {}
 
 #[derive(Debug, Clone, Default)]
 pub struct FallingBlock {
@@ -344,7 +343,7 @@ pub struct Arrow {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Egg { }
+pub struct Egg {}
 
 #[derive(Debug, Clone, Default)]
 pub struct Fireball {
@@ -353,7 +352,7 @@ pub struct Fireball {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Snowball { }
+pub struct Snowball {}
 
 #[derive(Debug, Clone, Default)]
 pub struct Human {
@@ -377,7 +376,7 @@ pub struct Ghast {
 
 #[derive(Debug, Clone, Default)]
 pub struct Slime {
-    /// Size of the slime, this is a bit different because here the size is initially 
+    /// Size of the slime, this is a bit different because here the size is initially
     /// at 0 and this is equivalent to 1 in Notchian implementation.
     pub size: u8,
     /// Remaining time before jumping.
@@ -397,7 +396,7 @@ pub struct Chicken {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Cow { }
+pub struct Cow {}
 
 #[derive(Debug, Clone, Default)]
 pub struct Sheep {
@@ -421,30 +420,29 @@ pub struct Wolf {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Creeper { 
+pub struct Creeper {
     /// True when the creeper is powered.
     pub powered: bool,
     /// Set to some time when the creeper is ignited.
-    pub ignited_time: Option<u16>
+    pub ignited_time: Option<u16>,
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Giant { }
+pub struct Giant {}
 
 #[derive(Debug, Clone, Default)]
-pub struct PigZombie { 
+pub struct PigZombie {
     pub anger: bool,
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Skeleton { }
+pub struct Skeleton {}
 
 #[derive(Debug, Clone, Default)]
-pub struct Spider { }
+pub struct Spider {}
 
 #[derive(Debug, Clone, Default)]
-pub struct Zombie { }
-
+pub struct Zombie {}
 
 /// Represent the art type for a painting.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -478,7 +476,6 @@ pub enum PaintingArt {
 }
 
 impl PaintingArt {
-
     pub const ALL: [PaintingArt; 25] = [
         Self::Kebab,
         Self::Aztec,
@@ -537,9 +534,7 @@ impl PaintingArt {
             Self::DonkeyKong => (4, 3),
         }
     }
-
 }
-
 
 /// Define a target for an entity to look at.
 #[derive(Debug, Clone, Default)]
@@ -549,7 +544,6 @@ pub struct LookTarget {
     /// Ticks remaining before stop looking at it.
     pub remaining_time: u32,
 }
-
 
 /// A result of the path finder.
 #[derive(Debug, Clone)]
@@ -566,12 +560,14 @@ impl From<Vec<IVec3>> for Path {
 
 impl From<IVec3> for Path {
     fn from(value: IVec3) -> Self {
-        Self { points: vec![value], index: 0 }
+        Self {
+            points: vec![value],
+            index: 0,
+        }
     }
 }
 
 impl Path {
-
     /// Return the current path position.
     pub fn point(&self) -> Option<IVec3> {
         self.points.get(self.index).copied()
@@ -581,12 +577,9 @@ impl Path {
     pub fn advance(&mut self) {
         self.index += 1;
     }
-    
 }
 
-
 impl Entity {
-
     /// Get the kind of entity from this instance.
     pub fn kind(&self) -> EntityKind {
         self.1.entity_kind()
@@ -599,19 +592,19 @@ impl Entity {
     }
 
     /// This this entity from its id in a world.
-    /// 
-    /// **This is really important to no change the entity kind when ticking the 
+    ///
+    /// **This is really important to no change the entity kind when ticking the
     /// function.**
     pub fn tick(&mut self, world: &mut World, id: u32) {
         tick::tick(world, id, self);
     }
 
     /// Synchronize this entity with its own data and ensures that the data are coherent.
-    /// 
+    ///
     /// This has different effect depending on the entity type, but in general the entity
     /// bounding box is resized around the entity position. But for example with paintings
-    /// only its block position will be used. 
-    /// 
+    /// only its block position will be used.
+    ///
     /// This is typically called after instantiation or after deserialization.
     pub fn sync(&mut self) {
         self.sync_inline()
@@ -621,14 +614,12 @@ impl Entity {
     /// known so the synchronization can be inlined and internal branches optimized.
     #[inline(always)]
     pub fn sync_inline(&mut self) {
-
         let Entity(base, base_kind) = self;
 
         // Calculate the new size from the entity properties.
         let size = match base_kind {
             BaseKind::Item(_) => DVec3::splat(0.25),
             BaseKind::Painting(painting) => {
-
                 // Initial position is within the block the painting is placed on.
                 base.pos = painting.block_pos.as_dvec3() + 0.5;
                 // Move its position on the face of the block (1.0 / 16.0 from face).
@@ -651,7 +642,6 @@ impl Entity {
                 size[painting.face.axis_index()] = 0.03125;
                 size -= 0.0125;
                 size
-
             }
             BaseKind::Boat(_) => DVec3::new(1.5, 0.6, 1.5),
             BaseKind::Minecart(_) => DVec3::new(0.98, 0.7, 0.98),
@@ -690,7 +680,10 @@ impl Entity {
         };
 
         let half_size = size / 2.0;
-        base.bb = BoundingBox { min: base.pos - half_size, max: base.pos + half_size };
+        base.bb = BoundingBox {
+            min: base.pos - half_size,
+            max: base.pos + half_size,
+        };
 
         // The bounding box of all projectile and living entities is not Y-centered.
         if let BaseKind::Projectile(_, _) | BaseKind::Living(_, _) = base_kind {
@@ -704,7 +697,6 @@ impl Entity {
             BaseKind::Living(_, _) => size.y as f32 * 0.85,
             _ => 0.0,
         };
-
     }
 
     /// Teleport the entity to a specific position, this function keep the bounding box
@@ -719,7 +711,6 @@ impl Entity {
     /// synchronized bounding box) in the given world. The entity is mutated because its
     /// RNG may be used.
     pub fn can_natural_spawn(&mut self, world: &World) -> bool {
-
         let Entity(base, BaseKind::Living(_, living_kind)) = self else {
             // Non-living entities cannot naturally spawn.
             return false;
@@ -735,7 +726,6 @@ impl Entity {
         let category = kind.category();
 
         if category == EntityCategory::Animal {
-            
             // Animals can only spawn on grass blocks.
             if !world.is_block(block_pos - IVec3::Y, block::GRASS) {
                 return false;
@@ -745,9 +735,7 @@ impl Entity {
             if world.get_light(block_pos).max() <= 8 {
                 return false;
             }
-
         } else if category == EntityCategory::Mob {
-
             let light = world.get_light(block_pos);
 
             // Lower chance of spawn if there is sky light.
@@ -759,7 +747,6 @@ impl Entity {
             if light.max_real() as i32 > base.rand.next_int_bounded(8) {
                 return false;
             }
-
         }
 
         if category != EntityCategory::Other {
@@ -775,32 +762,31 @@ impl Entity {
         }
 
         if category != EntityCategory::WaterAnimal {
-            
             // Any block colliding prevent spawning.
             if world.iter_blocks_boxes_colliding(base.bb).next().is_some() {
                 return false;
             }
 
             // Any colliding fluid block prevent spawning.
-            if world.iter_blocks_in_box(base.bb).any(|(_pos, block, _)| block::material::is_fluid(block)) {
+            if world
+                .iter_blocks_in_box(base.bb)
+                .any(|(_pos, block, _)| block::material::is_fluid(block))
+            {
                 return false;
             }
-
         }
 
         true
-
     }
 
     /// Initialize this entity for natural spawn, for example this randomize the slime
     /// size or sheep color or make a spider with jokey.
     pub fn init_natural_spawn(&mut self, _world: &mut World) {
-
         let Entity(base, BaseKind::Living(_, living_kind)) = self else {
             // Non-living entities cannot naturally spawn.
             return;
         };
-        
+
         // TODO: Spawning spider has 1% chance of being spider jockey.
 
         match living_kind {
@@ -822,13 +808,10 @@ impl Entity {
             }
             _ => {}
         }
-
     }
-
 }
 
 impl BaseKind {
-
     /// Get the generic entity kind from this base entity kind.
     pub fn entity_kind(&self) -> EntityKind {
         match self {
@@ -843,11 +826,9 @@ impl BaseKind {
             BaseKind::Living(_, kind) => kind.entity_kind(),
         }
     }
-
 }
 
 impl LivingKind {
-
     /// Get the generic entity kind from this living entity kind.
     pub fn entity_kind(&self) -> EntityKind {
         match self {
@@ -868,11 +849,9 @@ impl LivingKind {
             LivingKind::Zombie(_) => EntityKind::Zombie,
         }
     }
-
 }
 
 impl ProjectileKind {
-
     /// Get the generic entity kind from this projectile entity kind.
     pub fn entity_kind(&self) -> EntityKind {
         match self {
@@ -883,11 +862,9 @@ impl ProjectileKind {
             ProjectileKind::Bobber(_) => EntityKind::Bobber,
         }
     }
-
 }
 
 impl EntityKind {
-
     /// Create a new default entity instance from the given type.
     pub fn new_default(self, pos: DVec3) -> Box<Entity> {
         match self {
@@ -925,32 +902,35 @@ impl EntityKind {
     /// entity spawning when colliding.
     #[inline]
     pub fn is_hard(self) -> bool {
-        !matches!(self, EntityKind::Item |
-            EntityKind::Bobber |
-            EntityKind::LightningBolt |
-            EntityKind::Arrow |
-            EntityKind::Egg |
-            EntityKind::Fireball |
-            EntityKind::Snowball)
+        !matches!(
+            self,
+            EntityKind::Item
+                | EntityKind::Bobber
+                | EntityKind::LightningBolt
+                | EntityKind::Arrow
+                | EntityKind::Egg
+                | EntityKind::Fireball
+                | EntityKind::Snowball
+        )
     }
 
     /// Get the category of this entity kind.
     pub fn category(self) -> EntityCategory {
         match self {
-            EntityKind::Pig |
-            EntityKind::Chicken |
-            EntityKind::Cow |
-            EntityKind::Sheep |
-            EntityKind::Wolf => EntityCategory::Animal,
+            EntityKind::Pig
+            | EntityKind::Chicken
+            | EntityKind::Cow
+            | EntityKind::Sheep
+            | EntityKind::Wolf => EntityCategory::Animal,
             EntityKind::Squid => EntityCategory::WaterAnimal,
-            EntityKind::Creeper |
-            EntityKind::Giant |
-            EntityKind::PigZombie |
-            EntityKind::Skeleton |
-            EntityKind::Spider |
-            EntityKind::Zombie |
-            EntityKind::Slime => EntityCategory::Mob,
-            _ => EntityCategory::Other
+            EntityKind::Creeper
+            | EntityKind::Giant
+            | EntityKind::PigZombie
+            | EntityKind::Skeleton
+            | EntityKind::Spider
+            | EntityKind::Zombie
+            | EntityKind::Slime => EntityCategory::Mob,
+            _ => EntityCategory::Other,
         }
     }
 
@@ -963,13 +943,11 @@ impl EntityKind {
             _ => 4,
         }
     }
-
 }
 
 impl EntityCategory {
-
     pub const ALL: [Self; 4] = [Self::Animal, Self::WaterAnimal, Self::Mob, Self::Other];
-    
+
     /// Returns the maximum number of entities of this category before preventing more
     /// natural spawning. This number will be multiplied by the number of spawn-able
     /// chunks and then by 256 (16x16 chunks). So this is the maximum count of entities
@@ -992,13 +970,11 @@ impl EntityCategory {
             EntityCategory::Other => Material::Air,
         }
     }
-
 }
-
 
 macro_rules! impl_new_with {
     ( Base: $( $kind:ident $($def:expr)? ),* ) => {
-        
+
         $(impl $kind {
 
             /// Create a new instance of this entity type and initialize the entity with
@@ -1031,9 +1007,9 @@ macro_rules! impl_new_with {
 
     };
     ( Living: $( $kind:ident ($def_health:expr) $($def:expr)?),* ) => {
-        
+
         $(impl $kind {
-            
+
             /// Create a new instance of this entity type and initialize the entity with
             /// a closure.
             #[inline]
@@ -1065,9 +1041,9 @@ macro_rules! impl_new_with {
 
     };
     ( Projectile: $( $kind:ident ),* ) => {
-        
+
         $(impl $kind {
-            
+
             /// Create a new instance of this entity type and initialize the entity with
             /// a closure, the entity is then resized to initialize its bounding box.
             #[inline]
@@ -1098,7 +1074,7 @@ macro_rules! impl_new_with {
     };
 }
 
-impl_new_with!(Base: 
+impl_new_with!(Base:
     Item |_: &mut Base, this: &mut Item| { 
         this.health = 5; 
         this.stack = ItemStack::new_block(block::STONE, 0);
@@ -1128,7 +1104,7 @@ impl_new_with!(Living:
     Skeleton(20),
     Spider(20),
     Zombie(20));
-    
+
 impl_new_with!(Projectile: 
     Arrow,
     Egg,

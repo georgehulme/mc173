@@ -2,22 +2,19 @@
 
 use glam::IVec3;
 
-use crate::block_entity::BlockEntity;
-use crate::block::material::Material;
-use crate::util::default as def;
-use crate::geom::Face;
 use crate::block;
+use crate::block::material::Material;
+use crate::block_entity::BlockEntity;
+use crate::geom::Face;
+use crate::util::default as def;
 
 use super::World;
 
-
 /// Methods related to block placing.
 impl World {
-
     /// This function checks if the given block id can be placed at a particular position in
     /// the world, the given face indicates toward which face this block should be oriented.
     pub fn can_place_block(&mut self, pos: IVec3, face: Face, id: u8) -> bool {
-        
         let base = match id {
             block::BUTTON if face.is_y() => false,
             block::BUTTON => self.is_block_opaque_cube(pos + face.delta()),
@@ -54,7 +51,7 @@ impl World {
             block::STONE_PRESSURE_PLATE |
             block::PUMPKIN |
             block::PUMPKIN_LIT |
-            block::RAIL | 
+            block::RAIL |
             block::POWERED_RAIL |
             block::DETECTOR_RAIL |
             block::REPEATER |
@@ -72,7 +69,6 @@ impl World {
         }
 
         base && self.is_block_replaceable(pos)
-
     }
 
     fn can_place_cactus(&mut self, pos: IVec3) -> bool {
@@ -81,12 +77,17 @@ impl World {
                 return false;
             }
         }
-        matches!(self.get_block(pos - IVec3::Y), Some((block::CACTUS | block::SAND, _)))
+        matches!(
+            self.get_block(pos - IVec3::Y),
+            Some((block::CACTUS | block::SAND, _))
+        )
     }
 
     fn can_place_sugar_canes(&mut self, pos: IVec3) -> bool {
         let below_pos = pos - IVec3::Y;
-        if let Some((block::SUGAR_CANES | block::GRASS | block::DIRT, _)) = self.get_block(below_pos) {
+        if let Some((block::SUGAR_CANES | block::GRASS | block::DIRT, _)) =
+            self.get_block(below_pos)
+        {
             for face in Face::HORIZONTAL {
                 if self.get_block_material(below_pos + face.delta()) == Material::Water {
                     return true;
@@ -109,7 +110,12 @@ impl World {
                 // Check if the chest we found isn't a double chest.
                 for neighbor_face in Face::HORIZONTAL {
                     // Do not check our potential position.
-                    if face != neighbor_face.opposite() && matches!(self.get_block(neighbor_pos + neighbor_face.delta()), Some((block::CHEST, _))) {
+                    if face != neighbor_face.opposite()
+                        && matches!(
+                            self.get_block(neighbor_pos + neighbor_face.delta()),
+                            Some((block::CHEST, _))
+                        )
+                    {
                         return false; // The chest found already is double.
                     }
                 }
@@ -143,24 +149,27 @@ impl World {
     /// that this function do not check if this is legal, it will do what's asked. Also, the
     /// given metadata may be modified to account for the placement.
     pub fn place_block(&mut self, pos: IVec3, face: Face, id: u8, metadata: u8) {
-        
         match id {
             block::BUTTON => self.place_faced(pos, face, id, metadata, block::button::set_face),
             block::TRAPDOOR => self.place_faced(pos, face, id, metadata, block::trapdoor::set_face),
-            block::PISTON |
-            block::STICKY_PISTON => self.place_faced(pos, face, id, metadata, block::piston::set_face),
-            block::WOOD_STAIR | 
-            block::COBBLESTONE_STAIR => self.place_faced(pos, face, id, metadata, block::stair::set_face),
-            block::REPEATER | 
-            block::REPEATER_LIT => self.place_faced(pos, face, id, metadata, block::repeater::set_face),
-            block::PUMPKIN | 
-            block::PUMPKIN_LIT => self.place_faced(pos, face, id, metadata, block::pumpkin::set_face),
-            block::FURNACE | 
-            block::FURNACE_LIT |
-            block::DISPENSER => self.place_faced(pos, face, id, metadata, block::dispenser::set_face),
-            block::TORCH |
-            block::REDSTONE_TORCH |
-            block::REDSTONE_TORCH_LIT => self.place_faced(pos, face, id, metadata, block::torch::set_face),
+            block::PISTON | block::STICKY_PISTON => {
+                self.place_faced(pos, face, id, metadata, block::piston::set_face)
+            }
+            block::WOOD_STAIR | block::COBBLESTONE_STAIR => {
+                self.place_faced(pos, face, id, metadata, block::stair::set_face)
+            }
+            block::REPEATER | block::REPEATER_LIT => {
+                self.place_faced(pos, face, id, metadata, block::repeater::set_face)
+            }
+            block::PUMPKIN | block::PUMPKIN_LIT => {
+                self.place_faced(pos, face, id, metadata, block::pumpkin::set_face)
+            }
+            block::FURNACE | block::FURNACE_LIT | block::DISPENSER => {
+                self.place_faced(pos, face, id, metadata, block::dispenser::set_face)
+            }
+            block::TORCH | block::REDSTONE_TORCH | block::REDSTONE_TORCH_LIT => {
+                self.place_faced(pos, face, id, metadata, block::torch::set_face)
+            }
             block::LEVER => self.place_lever(pos, face, metadata),
             block::LADDER => self.place_ladder(pos, face, metadata),
             _ => {
@@ -177,21 +186,31 @@ impl World {
             block::JUKEBOX => self.set_block_entity(pos, BlockEntity::Jukebox(def())),
             _ => {}
         }
-
     }
 
     /// Generic function to place a block that has a basic facing function.
-    fn place_faced(&mut self, pos: IVec3, face: Face, id: u8, mut metadata: u8, func: impl FnOnce(&mut u8, Face)) {
+    fn place_faced(
+        &mut self,
+        pos: IVec3,
+        face: Face,
+        id: u8,
+        mut metadata: u8,
+        func: impl FnOnce(&mut u8, Face),
+    ) {
         func(&mut metadata, face);
         self.set_block_notify(pos, id, metadata);
     }
 
     fn place_lever(&mut self, pos: IVec3, face: Face, mut metadata: u8) {
         // When facing down, randomly pick the orientation.
-        block::lever::set_face(&mut metadata, face, match face {
-            Face::NegY => self.rand.next_choice(&[Face::PosZ, Face::PosX]),
-            _ => Face::PosY,
-        });
+        block::lever::set_face(
+            &mut metadata,
+            face,
+            match face {
+                Face::NegY => self.rand.next_choice(&[Face::PosZ, Face::PosX]),
+                _ => Face::PosY,
+            },
+        );
         self.set_block_notify(pos, block::LEVER, metadata);
     }
 
@@ -219,5 +238,4 @@ impl World {
         }
         false
     }
-
 }

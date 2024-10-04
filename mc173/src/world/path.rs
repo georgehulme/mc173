@@ -11,39 +11,47 @@ use crate::geom::BoundingBox;
 
 use super::World;
 
-
 /// Methods related path finding in worlds.
 impl World {
-
-    /// Find a path in the world from on position to another, with a given maximum 
+    /// Find a path in the world from on position to another, with a given maximum
     /// distance, if no path can be found none is returned. The result also depends on
     /// the entity size, which will determine wether or not the entity can go through
     /// a hole or not.
-    pub fn find_path(&mut self, from: IVec3, to: IVec3, entity_size: IVec3, dist: f32) -> Option<Vec<IVec3>> {
+    pub fn find_path(
+        &mut self,
+        from: IVec3,
+        to: IVec3,
+        entity_size: IVec3,
+        dist: f32,
+    ) -> Option<Vec<IVec3>> {
         PathFinder::new(self).find_path(from, to, entity_size, dist)
     }
 
-    /// A specialization or [`find_path`](Self::find_path) to find a path of a moving 
-    /// bounding box to a given position. The actual position of the bounding is its 
+    /// A specialization or [`find_path`](Self::find_path) to find a path of a moving
+    /// bounding box to a given position. The actual position of the bounding is its
     /// bottom center.
-    pub fn find_path_from_bounding_box(&mut self, from: BoundingBox, to: DVec3, dist: f32) -> Option<Vec<IVec3>> {
-        
+    pub fn find_path_from_bounding_box(
+        &mut self,
+        from: BoundingBox,
+        to: DVec3,
+        dist: f32,
+    ) -> Option<Vec<IVec3>> {
         // println!("== find_path_from_bounding_box: from {from}, to {to}, dist {dist}");
 
         let size = from.size();
         let from = from.min.floor().as_ivec3();
-        let to = to.sub(DVec3 {
-            x: size.x / 2.0,
-            y: 0.0,
-            z: size.z / 2.0,
-        }).floor().as_ivec3();
+        let to = to
+            .sub(DVec3 {
+                x: size.x / 2.0,
+                y: 0.0,
+                z: size.z / 2.0,
+            })
+            .floor()
+            .as_ivec3();
 
         self.find_path(from, to, size.add(1.0).floor().as_ivec3(), dist)
-
     }
-
 }
-
 
 /// A path finder on a world.
 struct PathFinder<'a> {
@@ -55,7 +63,7 @@ struct PathFinder<'a> {
     points: Vec<PathPoint>,
     /// Mapping of points from their block position.
     points_map: HashMap<IVec3, usize>,
-    /// A sorted array of points by distance to target, decreasing order. We use 
+    /// A sorted array of points by distance to target, decreasing order. We use
     /// decreasing order because we'll always take the point with less distance to
     /// target, getting it from the end reduces overhead of the operation because no
     /// other element need to be moved.
@@ -81,7 +89,6 @@ struct PathPoint {
 }
 
 impl<'a> PathFinder<'a> {
-
     pub fn new(world: &'a World) -> Self {
         Self {
             world,
@@ -105,7 +112,10 @@ impl<'a> PathFinder<'a> {
             hash_map::Entry::Vacant(v) => {
                 let index = self.points.len();
                 v.insert(index);
-                self.points.push(PathPoint { pos, ..Default::default() });
+                self.points.push(PathPoint {
+                    pos,
+                    ..Default::default()
+                });
                 (index, &mut self.points[index])
             }
         }
@@ -113,7 +123,6 @@ impl<'a> PathFinder<'a> {
 
     /// Check clearance of the given position, depending on the current entity size.
     fn check_clearance(&self, pos: IVec3) -> PathClearance {
-        
         for (_, block, metadata) in self.world.iter_blocks_in(pos, pos + self.entity_size) {
             match block {
                 block::AIR => {}
@@ -122,27 +131,23 @@ impl<'a> PathFinder<'a> {
                         return PathClearance::Blocked;
                     }
                 }
-                _ => {
-                    match block::material::get_material(block) {
-                        Material::Water => return PathClearance::Water,
-                        Material::Lava => return PathClearance::Lava,
-                        material => {
-                            if material.is_solid() {
-                                return PathClearance::Blocked;
-                            }
+                _ => match block::material::get_material(block) {
+                    Material::Water => return PathClearance::Water,
+                    Material::Lava => return PathClearance::Lava,
+                    material => {
+                        if material.is_solid() {
+                            return PathClearance::Blocked;
                         }
                     }
-                }
+                },
             }
         }
 
         PathClearance::Clear
-
     }
 
     /// Find a safe point to path find to in above or below the given position.
     fn find_safe_point(&mut self, mut pos: IVec3, clear: bool) -> Option<usize> {
-
         let mut ret = None;
 
         if self.check_clearance(pos) == PathClearance::Clear {
@@ -155,10 +160,8 @@ impl<'a> PathFinder<'a> {
         }
 
         if let Some(point_index) = &mut ret {
-
             let mut height = 0;
             while pos.y > 0 {
-                
                 pos.y -= 1;
                 height += 1;
 
@@ -167,7 +170,7 @@ impl<'a> PathFinder<'a> {
                     PathClearance::Lava => return None,
                     _ => break,
                 }
-                
+
                 // NOTE: Updating height here is important, because if we get block/water
                 // for height == 4, then it'll break and still return a valid point.
                 if height >= 4 {
@@ -175,18 +178,14 @@ impl<'a> PathFinder<'a> {
                 }
 
                 *point_index = self.ensure_point(pos).0;
-
             }
-
         }
 
         ret
-
     }
 
     /// Find path options around the given 'from' position, with a maximum distance.
     fn find_path_options(&mut self, from: IVec3, to: IVec3, dist: f32) -> [Option<usize>; 4] {
-
         let clear = self.check_clearance(from + IVec3::Y) == PathClearance::Clear;
 
         let mut ret = [
@@ -208,18 +207,19 @@ impl<'a> PathFinder<'a> {
         }
 
         ret
-
     }
 
     /// Ensure that a point (given its index) is present in the pending list.
     fn ensure_pending_point(&mut self, point_index: usize) {
-
         let point = &mut self.points[point_index];
         let point_distance_to_target = point.distance_to_target;
 
         // If the point was pending, remove it before inserting again.
         if point.pending {
-            let index = self.pending.iter().position(|&index| index == point_index)
+            let index = self
+                .pending
+                .iter()
+                .position(|&index| index == point_index)
                 .expect("should be in the pending list");
             self.pending.remove(index);
         }
@@ -227,23 +227,30 @@ impl<'a> PathFinder<'a> {
         // Now we are sure that this point will be pending.
         point.pending = true;
 
-        // CRITICAL: We need to keep the pending list ordered, smaller distance to 
+        // CRITICAL: We need to keep the pending list ordered, smaller distance to
         // target at the end of the list.
-        let insert_index = self.pending.binary_search_by(|&index| {
-            let distance_to_target = self.points[index].distance_to_target;
-            point_distance_to_target.total_cmp(&distance_to_target)
-        }).unwrap_or_else(|index| index);
+        let insert_index = self
+            .pending
+            .binary_search_by(|&index| {
+                let distance_to_target = self.points[index].distance_to_target;
+                point_distance_to_target.total_cmp(&distance_to_target)
+            })
+            .unwrap_or_else(|index| index);
 
         self.pending.insert(insert_index, point_index);
-
     }
 
-    /// Find a path in the world from on position to another, with a given maximum 
+    /// Find a path in the world from on position to another, with a given maximum
     /// distance, if no path can be found none is returned. The result also depends on
     /// the entity size, which will determine wether or not the entity can go through
     /// a hole or not.
-    fn find_path(&mut self, from: IVec3, to: IVec3, entity_size: IVec3, dist: f32) -> Option<Vec<IVec3>> {
-        
+    fn find_path(
+        &mut self,
+        from: IVec3,
+        to: IVec3,
+        entity_size: IVec3,
+        dist: f32,
+    ) -> Option<Vec<IVec3>> {
         // println!("== find_path: from {from}, to {to}, entity_size {entity_size}, dist {dist}");
 
         self.entity_size = entity_size;
@@ -261,7 +268,6 @@ impl<'a> PathFinder<'a> {
         let mut near_index = 0;
 
         while let Some(current_index) = self.pending.pop() {
-
             let current_point = &mut self.points[current_index];
 
             // println!("pending count: {}, distance to target: {}, total distance: {}", self.pending.len(), current_point.distance_to_target, current_point.total_distance);
@@ -283,32 +289,33 @@ impl<'a> PathFinder<'a> {
             let current_total_distance = current_point.total_distance;
 
             // Try each option to check if this is better than the current one.
-            self.find_path_options(current_pos, to, dist).into_iter().for_each(|option| {
-                if let Some(option_index) = option {
-                    let option_point = &mut self.points[option_index];
-                    let added_distance = Self::distance(current_pos, option_point.pos);
-                    let new_total_distance = current_total_distance + added_distance;
-                    // If the point is not in the path or it is shorter than current one.
-                    if !option_point.pending || new_total_distance < current_total_distance {
-                        // Update our option point to point to the previous point.
-                        option_point.previous_index = Some(current_index);
-                        option_point.total_distance = new_total_distance;
-                        option_point.distance_to_next = Self::distance(option_point.pos, to);
-                        option_point.distance_to_target = option_point.total_distance + option_point.distance_to_next;
-                        // If the point was already in the path, we need to resort it, if
-                        // the point was not in the path, just add it at the right place.
-                        self.ensure_pending_point(option_index);
+            self.find_path_options(current_pos, to, dist)
+                .into_iter()
+                .for_each(|option| {
+                    if let Some(option_index) = option {
+                        let option_point = &mut self.points[option_index];
+                        let added_distance = Self::distance(current_pos, option_point.pos);
+                        let new_total_distance = current_total_distance + added_distance;
+                        // If the point is not in the path or it is shorter than current one.
+                        if !option_point.pending || new_total_distance < current_total_distance {
+                            // Update our option point to point to the previous point.
+                            option_point.previous_index = Some(current_index);
+                            option_point.total_distance = new_total_distance;
+                            option_point.distance_to_next = Self::distance(option_point.pos, to);
+                            option_point.distance_to_target =
+                                option_point.total_distance + option_point.distance_to_next;
+                            // If the point was already in the path, we need to resort it, if
+                            // the point was not in the path, just add it at the right place.
+                            self.ensure_pending_point(option_index);
+                        }
                     }
-                }
-            });
-
+                });
         }
 
         // If we did not find any better point that the initial one, return nothing.
         if near_index == 0 {
             None
         } else {
-
             let mut ret = Vec::new();
 
             loop {
@@ -328,11 +335,8 @@ impl<'a> PathFinder<'a> {
 
             ret.reverse();
             Some(ret)
-
         }
-
     }
-
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

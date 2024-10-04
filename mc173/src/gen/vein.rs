@@ -1,14 +1,13 @@
 //! Clay and ore patch feature.
 
-use glam::{IVec3, DVec3};
+use glam::{DVec3, IVec3};
 
+use crate::block;
 use crate::rand::JavaRandom;
 use crate::world::World;
-use crate::block;
 
 use super::math::MinecraftMath;
 use super::FeatureGenerator;
-
 
 /// A generator for mob spawner dungeon.
 pub struct VeinGenerator {
@@ -18,12 +17,11 @@ pub struct VeinGenerator {
 }
 
 impl VeinGenerator {
-
     #[inline]
     pub fn new(replace_id: u8, place_id: u8, count: u8) -> Self {
-        Self { 
+        Self {
             replace_id,
-            place_id, 
+            place_id,
             count,
         }
     }
@@ -37,13 +35,10 @@ impl VeinGenerator {
     pub fn new_ore(place_id: u8, count: u8) -> Self {
         Self::new(block::STONE, place_id, count)
     }
-
 }
 
 impl FeatureGenerator for VeinGenerator {
-
     fn generate(&mut self, world: &mut World, pos: IVec3, rand: &mut JavaRandom) -> bool {
-
         let angle = rand.next_float() * f32::MC_PI;
         let (angle_sin, angle_cos) = angle.mc_sin_cos();
         let angle_sin = angle_sin * self.count as f32 / 8.0;
@@ -62,12 +57,13 @@ impl FeatureGenerator for VeinGenerator {
         };
 
         for i in 0..=self.count {
-
             // Interpolation.
             let center_pos = line_start + (line_stop - line_start) * i as f64 / self.count as f64;
 
             let base_size = rand.next_double() * self.count as f64 / 16.0;
-            let size = ((i as f32 * f32::MC_PI / self.count as f32).mc_sin() + 1.0) as f64 * base_size + 1.0;
+            let size = ((i as f32 * f32::MC_PI / self.count as f32).mc_sin() + 1.0) as f64
+                * base_size
+                + 1.0;
             let half_size = size / 2.0;
 
             let start = (center_pos - half_size).floor().as_ivec3();
@@ -76,22 +72,19 @@ impl FeatureGenerator for VeinGenerator {
             for x in start.x..=stop.x {
                 for z in start.z..=stop.z {
                     for y in start.y..=stop.y {
-
                         let place_pos = IVec3::new(x, y, z);
                         let delta = (place_pos.as_dvec3() + 0.5 - center_pos) / half_size;
 
-                        if delta.length_squared() < 1.0 && world.is_block(place_pos, self.replace_id) {
+                        if delta.length_squared() < 1.0
+                            && world.is_block(place_pos, self.replace_id)
+                        {
                             world.set_block(place_pos, self.place_id, 0);
                         }
-
                     }
                 }
             }
-
         }
 
         true
-
     }
-
 }

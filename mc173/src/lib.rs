@@ -1,22 +1,22 @@
 //! A Minecraft beta 1.7.3 server backend in Rust.
 
-pub mod io;
-pub mod util;
 pub mod geom;
+pub mod io;
 pub mod rand;
+pub mod util;
 
-pub mod block;
-pub mod item;
-pub mod entity;
-pub mod block_entity;
 pub mod biome;
+pub mod block;
+pub mod block_entity;
+pub mod entity;
+pub mod item;
 
-pub mod inventory;
 pub mod craft;
+pub mod inventory;
 pub mod smelt;
 
 pub mod chunk;
-pub mod world;
-pub mod storage;
-pub mod serde;
 pub mod gen;
+pub mod serde;
+pub mod storage;
+pub mod world;
