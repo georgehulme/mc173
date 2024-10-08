@@ -125,12 +125,12 @@ impl Server {
             // Save current player state
             self.save_player_state(world_index, player_index);
             // If the client was playing, remove it from its world.
-            let state = &mut self.worlds[world_index];
             // Swap remove the player and tell the world.
-            let mut player = state.players.swap_remove(player_index);
-            state.world.handle_player_leave(&mut player, true);
+            let mut player = self.worlds[world_index].players.swap_remove(player_index);
+            self.worlds[world_index].world.handle_player_leave(&mut player, true);
+            self.broadcast_chat(format!("{} left the server.", player.username));
             // If a player has been swapped in place of this new one, redefine its state.
-            if let Some(swapped_player) = state.players.get(player_index) {
+            if let Some(swapped_player) = self.worlds[world_index].players.get(player_index) {
                 self.clients
                     .insert(
                         swapped_player.client,
@@ -273,7 +273,9 @@ impl Server {
             .world
             .handle_player_join(&mut player);
         let player_index = self.worlds[world_index].players.len();
+        let player_join_message = format!("{} joined the server.", player.username);
         self.worlds[world_index].players.push(player);
+        self.broadcast_chat(player_join_message);
 
         // Replace the previous state with a playing state containing the world and
         // player indices, used to get to the player instance.
@@ -355,6 +357,15 @@ impl Server {
                     stack: player.main_inv[((i + 9) % 36) as usize].to_non_empty(),
                 }),
             );
+        }
+    }
+
+    /// Send a chat message to all players connected to server.
+    fn broadcast_chat(&self, message: String) {
+        for world_state in &self.worlds {
+            for player in &world_state.players {
+                player.send_chat(message.clone());
+            }
         }
     }
 
