@@ -48,15 +48,15 @@ pub struct ServerPlayer {
     /// should be sent.
     pub tracked_entities: HashSet<u32>,
     /// The main player inventory including the hotbar in the first 9 slots.
-    main_inv: Box<[ItemStack; 36]>,
+    pub main_inv: Box<[ItemStack; 36]>,
     /// The armor player inventory.
-    armor_inv: Box<[ItemStack; 4]>,
+    pub armor_inv: Box<[ItemStack; 4]>,
     /// The item stacks for the 3x3 crafting grid. Also support the 2x2 as top left slots.
-    craft_inv: Box<[ItemStack; 9]>,
+    pub craft_inv: Box<[ItemStack; 9]>,
     /// The item stack in the cursor of the client's using a window.
-    cursor_stack: ItemStack,
+    pub cursor_stack: ItemStack,
     /// The slot current selected for the hand. Must be in range 0..9.
-    hand_slot: u8,
+    pub hand_slot: u8,
     /// The total number of windows that have been opened by this player, this is also
     /// used to generate a unique window id. This id should never be zero because it is
     /// reserved for the player inventory.
@@ -129,11 +129,11 @@ impl ServerPlayer {
             instant_break: false,
             tracked_chunks: HashSet::new(),
             tracked_entities: HashSet::new(),
-            main_inv: Box::new([ItemStack::EMPTY; 36]),
-            armor_inv: Box::new([ItemStack::EMPTY; 4]),
-            craft_inv: Box::new([ItemStack::EMPTY; 9]),
-            cursor_stack: ItemStack::EMPTY,
-            hand_slot: 0,
+            main_inv: offline.main_inv.clone(),
+            armor_inv: offline.armor_inv.clone(),
+            craft_inv: offline.craft_inv.clone(),
+            cursor_stack: offline.cursor_stack,
+            hand_slot: offline.hand_slot,
             window_count: 0,
             window: Window::default(),
             craft_tracker: CraftTracker::default(),

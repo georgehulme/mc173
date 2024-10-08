@@ -5,8 +5,6 @@ use std::io;
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
 
-use glam::Vec2;
-
 use tracing::{info, warn};
 
 use mc173::entity::{self as e};
@@ -124,6 +122,8 @@ impl Server {
             player_index,
         } = state
         {
+            // Save current player state
+            self.save_player_state(world_index, player_index);
             // If the client was playing, remove it from its world.
             let state = &mut self.worlds[world_index];
             // Swap remove the player and tell the world.
@@ -196,16 +196,12 @@ impl Server {
         let offline_player = self
             .offline_players
             .entry(packet.username.clone())
-            .or_insert_with(|| {
-                let state = &self.worlds[0];
-                OfflinePlayer {
-                    world: state.world.name.clone(),
-                    pos: spawn_pos,
-                    look: Vec2::ZERO,
-                }
-            });
+            .or_insert(OfflinePlayer::new(
+                self.worlds[0].world.name.clone(),
+                spawn_pos,
+            ));
 
-        let (world_index, state) = self
+        let (world_index, _) = self
             .worlds
             .iter_mut()
             .enumerate()
@@ -222,16 +218,19 @@ impl Server {
             player.username = packet.username.clone();
         });
 
-        let entity_id = state.world.world.spawn_entity(entity);
-        state.world.world.set_player_entity(entity_id, true);
+        let entity_id = self.worlds[world_index].world.world.spawn_entity(entity);
+        self.worlds[world_index]
+            .world
+            .world
+            .set_player_entity(entity_id, true);
 
         // Confirm the login by sending same packet in response.
         self.net.send(
             client,
             OutPacket::Login(proto::OutLoginPacket {
                 entity_id,
-                random_seed: state.world.seed,
-                dimension: match state.world.world.get_dimension() {
+                random_seed: self.worlds[world_index].world.seed,
+                dimension: match self.worlds[world_index].world.world.get_dimension() {
                     Dimension::Overworld => 0,
                     Dimension::Nether => -1,
                 },
@@ -246,26 +245,15 @@ impl Server {
             }),
         );
 
-        // Send the initial position for the client.
-        self.net.send(
-            client,
-            OutPacket::PositionLook(proto::PositionLookPacket {
-                pos: offline_player.pos,
-                stance: offline_player.pos.y + 1.62,
-                look: offline_player.look,
-                on_ground: false,
-            }),
-        );
-
         // Time must be sent once at login to conclude the login phase.
         self.net.send(
             client,
             OutPacket::UpdateTime(proto::UpdateTimePacket {
-                time: state.world.world.get_time(),
+                time: self.worlds[world_index].world.world.get_time(),
             }),
         );
 
-        if state.world.world.get_weather() != Weather::Clear {
+        if self.worlds[world_index].world.world.get_weather() != Weather::Clear {
             self.net.send(
                 client,
                 OutPacket::Notification(proto::NotificationPacket { reason: 1 }),
@@ -280,9 +268,12 @@ impl Server {
             packet.username,
             offline_player,
         );
-        state.world.handle_player_join(&mut player);
-        let player_index = state.players.len();
-        state.players.push(player);
+        self.restore_player_state(client, &player);
+        self.worlds[world_index]
+            .world
+            .handle_player_join(&mut player);
+        let player_index = self.worlds[world_index].players.len();
+        self.worlds[world_index].players.push(player);
 
         // Replace the previous state with a playing state containing the world and
         // player indices, used to get to the player instance.
@@ -296,12 +287,86 @@ impl Server {
 
         // Just a sanity check...
         debug_assert_eq!(previous_state, Some(ClientState::Handshaking));
+    }
 
-        // TODO: Broadcast chat joining chat message.
+    fn save_player_state(&mut self, world_index: usize, player_index: usize) {
+        let state = &self.worlds[world_index];
+        let player = &state.players[player_index];
+        self.offline_players.insert(
+            player.username.clone(),
+            OfflinePlayer {
+                world: state.world.name.clone(),
+                pos: player.pos
+                    + glam::DVec3 {
+                        x: 0.0,
+                        y: 1.72,
+                        z: 0.0,
+                    },
+                look: player.look,
+                main_inv: player.main_inv.to_owned(),
+                armor_inv: player.armor_inv.to_owned(),
+                craft_inv: player.craft_inv.to_owned(),
+                cursor_stack: player.cursor_stack,
+                hand_slot: player.hand_slot,
+            },
+        );
+    }
+
+    fn restore_player_state(&self, client: NetworkClient, player: &ServerPlayer) {
+        // Send the initial position for the client.
+        self.net.send(
+            client,
+            OutPacket::PositionLook(proto::PositionLookPacket {
+                pos: player.pos,
+                stance: player.pos.y + 1.62,
+                look: player.look * (360.0 / core::f32::consts::TAU),
+                on_ground: false,
+            }),
+        );
+        // Send the initial crafting inventory for the client.
+        for i in 0..4 {
+            self.net.send(
+                client,
+                OutPacket::WindowSetItem(proto::WindowSetItemPacket {
+                    window_id: 0,
+                    slot: i + 1,
+                    stack: player.craft_inv[i as usize].to_non_empty(),
+                }),
+            );
+        }
+        // Send the initial armor inventory for the client.
+        for i in 0..4 {
+            self.net.send(
+                client,
+                OutPacket::WindowSetItem(proto::WindowSetItemPacket {
+                    window_id: 0,
+                    slot: i + 5,
+                    stack: player.armor_inv[i as usize].to_non_empty(),
+                }),
+            );
+        }
+        // Send the initial main inventory for the client.
+        for i in 0..36 {
+            self.net.send(
+                client,
+                OutPacket::WindowSetItem(proto::WindowSetItemPacket {
+                    window_id: 0,
+                    slot: i + 9,
+                    stack: player.main_inv[((i + 9) % 36) as usize].to_non_empty(),
+                }),
+            );
+        }
     }
 
     /// Send disconnect (a.k.a. kick) to a client.
     fn send_disconnect(&mut self, client: NetworkClient, reason: String) {
+        if let Some(&ClientState::Playing {
+            world_index,
+            player_index,
+        }) = self.clients.get(&client)
+        {
+            self.save_player_state(world_index, player_index);
+        }
         self.net.send(
             client,
             OutPacket::Disconnect(proto::DisconnectPacket { reason }),
